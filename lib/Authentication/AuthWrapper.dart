@@ -1,9 +1,7 @@
-import 'package:asmolg/home.dart';
+import 'package:asmolg/Authentication/LoginPage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'LoginPage.dart';
-import 'LoginScreen.dart';
-import 'homepage.dart';
+import '../MainScreeens/homepage.dart';
 
 
 

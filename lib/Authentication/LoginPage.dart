@@ -1,9 +1,8 @@
-import 'package:asmolg/LoginScreen.dart';
+import 'package:asmolg/Authentication/LoginScreen.dart';
+import 'package:asmolg/Authentication/RegisterPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-
-import 'RegisterPage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});

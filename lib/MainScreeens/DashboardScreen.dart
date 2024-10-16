@@ -4,18 +4,18 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:screen_protector/screen_protector.dart';
 
-import 'SeeAllPage.dart';
-import 'aptitude_card.dart';
-import 'department_card.dart';
+import '../SeeAllPage.dart';
+import '../aptitude_card.dart';
+import '../department_card.dart';
 
-class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({Key? key}) : super(key: key);
 
   @override
-  _HomePageState createState() => _HomePageState();
+  _DashboardScreenState createState() => _DashboardScreenState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _DashboardScreenState extends State<DashboardScreen> {
   final CollectionReference _departmentCollection = FirebaseFirestore.instance.collection('notes');
   final CollectionReference _carouselCollection = FirebaseFirestore.instance.collection('Carousel Ads');
   final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore.instance.collection('Aptitude');

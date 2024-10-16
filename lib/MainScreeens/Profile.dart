@@ -1,12 +1,10 @@
-import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:asmolg/Authentication/LoginPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'AptitudeTopicPage.dart';
-import 'NotificationController.dart';
-import 'TopicsPage.dart';
-import 'LoginPage.dart'; // Import your LoginPage here
+import '../AptitudeTopicPage.dart';
+import '../TopicsPage.dart';
 
 class ProfileApp extends StatefulWidget {
   @override

@@ -1,11 +1,7 @@
-import 'package:animated_botton_navigation/animated_botton_navigation.dart';
-import 'package:asmolg/AuthWrapper.dart';
+import 'package:asmolg/Authentication/AuthWrapper.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-
-import 'LoginPage.dart';
 
 
 

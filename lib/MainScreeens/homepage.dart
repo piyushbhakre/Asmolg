@@ -4,7 +4,7 @@ import 'package:flutter/services.dart'; // For SystemChrome and hiding system UI
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flashy_tab_bar2/flashy_tab_bar2.dart'; // Import flashy_tab_bar2
 import 'Profile.dart';
-import 'home.dart';
+import 'DashboardScreen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -17,7 +17,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _pages = [
-    HomePage(),
+    DashboardScreen(),
     ProfileApp(),
     SupportPage(),
   ];

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-import 'fileViewer.dart';
+import '../fileViewer.dart';
 
 class NotesPage extends StatefulWidget {
   final String topicName;
@@ -134,7 +134,6 @@ class _NotesPageState extends State<NotesPage> {
                       },
                     );
                   }
-
                   return const Center(child: Text('No notes found.'));
                 },
               ),

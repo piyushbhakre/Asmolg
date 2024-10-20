@@ -1,7 +1,11 @@
+import 'dart:ui';
+import 'package:asmolg/Authentication/LoginScreen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart'; // Import Firebase Auth
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart'; // For loading animation
 
 class RegisterPage extends StatefulWidget {
   @override
@@ -18,6 +22,125 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscureTextPassword = true;
   bool _obscureTextRepeatPassword = true;
+
+  // Email Regex pattern
+  final RegExp emailRegex = RegExp(r'^[a-zA-Z0-9._%-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$');
+  final RegExp passwordRegex = RegExp(r'^(?=.*[a-zA-Z])(?=.*\d)[a-zA-Z\d]{8,}$'); // Alpha-numeric password
+
+  // Check if all required fields are filled
+  bool _areFieldsValid() {
+    if (_fullNameController.text.isEmpty || _emailController.text.isEmpty || _phoneController.text.isEmpty || _collegeController.text.isEmpty || _passwordController.text.isEmpty || _repeatPasswordController.text.isEmpty) {
+      return false;
+    }
+    return true;
+  }
+
+  // Validate phone number (only digits allowed)
+  bool _isPhoneNumberValid() {
+    return _phoneController.text.isNotEmpty && _phoneController.text.length == 10 && RegExp(r'^[0-9]+$').hasMatch(_phoneController.text);
+  }
+
+  // Validate password
+  bool _isPasswordValid() {
+    return passwordRegex.hasMatch(_passwordController.text);
+  }
+
+  Future<void> _register() async {
+    if (!_areFieldsValid()) {
+      CherryToast.error(
+        title: Text("Error"),
+        description: Text("All fields are required."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+      return;
+    }
+
+    if (!_isPhoneNumberValid()) {
+      CherryToast.error(
+        title: Text("Error"),
+        description: Text("Please enter a valid 10-digit phone number."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+      return;
+    }
+
+    if (!_isPasswordValid()) {
+      CherryToast.error(
+        title: Text("Error"),
+        description: Text("Password must be at least 8 characters and alphanumeric."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+      return;
+    }
+
+    if (_passwordController.text != _repeatPasswordController.text) {
+      CherryToast.error(
+        title: Text("Error"),
+        description: Text("Passwords do not match."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Create user with Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      // After successful registration, save additional user info in Firestore
+      await FirebaseFirestore.instance.collection('users').doc(_emailController.text).set({
+        'FullName': _fullNameController.text,
+        'Email': _emailController.text,
+        'MobileNumber': _phoneController.text,
+        'college/University': _collegeController.text,
+      });
+
+      // Show success dialog
+      CherryToast.success(
+        title: Text("Registration Successful"),
+        description: Text("Your account has been created successfully."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+
+      Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => LoginScreen()),
+              (Route<dynamic> route) => false
+      );
+
+
+    } on FirebaseAuthException catch (e) {
+      String errorMessage;
+      if (e.code == 'weak-password') {
+        errorMessage = 'The password provided is too weak.';
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = 'The account already exists for that email.';
+      } else {
+        errorMessage = 'Registration failed. Please try again.';
+      }
+
+      CherryToast.error(
+        title: Text("Registration Failed"),
+        description: Text(errorMessage),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+    } catch (e) {
+      CherryToast.error(
+        title: Text("Server Error"),
+        description: Text("The server is down. Please try again later."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +197,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       'Create your account',
                       style: TextStyle(
                         fontSize: 16,
-                        color: Colors.white
+                        color: Colors.white,
                       ),
                     ),
                   ],
@@ -123,6 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _phoneController,
+                    keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       hintText: 'Phone Number',
                       labelText: 'Phone Number',
@@ -205,16 +329,12 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPressed: _register,
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue, // Green color
+                        backgroundColor: Colors.blue,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                      )
-                          : Text(
+                      child: Text(
                         'Register',
                         style: TextStyle(
                           fontSize: 16,
@@ -228,104 +348,21 @@ class _RegisterPageState extends State<RegisterPage> {
               ),
             ),
           ),
+          if (_isLoading)
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: LoadingAnimationWidget.halfTriangleDot(
+                    color: Colors.black,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
-  }
-
-  Future<void> _register() async {
-    if (_passwordController.text == _repeatPasswordController.text) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      try {
-        // Create user with Firebase Authentication
-        UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
-        );
-
-        // After successful registration, save additional user info in Firestore using email as document ID
-        await FirebaseFirestore.instance.collection('users').doc(_emailController.text).set({
-          'FullName': _fullNameController.text,
-          'Email': _emailController.text,
-          'MobileNumber': _phoneController.text,
-          'college/University': _collegeController.text,
-        });
-
-        // Show success dialog
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Registration Successful'),
-              content: Text('Your account has been created successfully.'),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                    Navigator.pop(context); // Go back to the previous screen
-                  },
-                  child: Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      } on FirebaseAuthException catch (e) {
-        // Handle Firebase Auth errors
-        String errorMessage;
-        if (e.code == 'weak-password') {
-          errorMessage = 'The password provided is too weak.';
-        } else if (e.code == 'email-already-in-use') {
-          errorMessage = 'The account already exists for that email.';
-        } else {
-          errorMessage = 'Registration failed. Please try again.';
-        }
-
-        // Show error dialog
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return AlertDialog(
-              title: Text('Registration Failed'),
-              content: Text(errorMessage),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop(); // Close the dialog
-                  },
-                  child: Text('OK'),
-                ),
-              ],
-            );
-          },
-        );
-      } finally {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    } else {
-      // Show error dialog for mismatched passwords
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: Text('Registration Failed'),
-            content: Text('Passwords do not match!'),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // Close the dialog
-                },
-                child: Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
-    }
   }
 }

@@ -1,14 +1,12 @@
-<<<<<<< Updated upstream
+import 'dart:ui';
 
-=======
-import 'package:asmolg/MainScreeens/homepage.dart';
->>>>>>> Stashed changes
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:asmolg/Authentication/RegisterPage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:cherry_toast/cherry_toast.dart';
 import '../MainScreeens/homepage.dart';
-
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -16,10 +14,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final TextEditingController _EmailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _resetLoading = false; // Loading state for password reset
   bool _obscureTextPassword = true;
+  String? _emailError;
+  String? _passwordError;
 
   // Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -33,7 +34,29 @@ class _LoginScreenState extends State<LoginScreen> {
     ));
   }
 
+  // Map Firebase error codes to user-friendly messages
+  String _handleFirebaseError(String errorCode) {
+    switch (errorCode) {
+      case 'user-not-found':
+        return 'Email is incorrect or not registered';
+      case 'wrong-password':
+        return 'Password is incorrect';
+      case 'invalid-email':
+        return 'The email address is not valid';
+      default:
+        return 'Login failed. Please try again';
+    }
+  }
+
   Future<void> _login() async {
+    // Validate email and password fields
+    setState(() {
+      _emailError = _emailController.text.isEmpty ? "Please fill in the email" : null;
+      _passwordError = _passwordController.text.isEmpty ? "Please fill in the password" : null;
+    });
+
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -41,24 +64,176 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       // Sign in with Email and password
       await _auth.signInWithEmailAndPassword(
-        email: _EmailController.text.trim(),
+        email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
+
+      // Show CherryToast after successful login
+      CherryToast.success(
+        title: Text("Login Successful 🎉"),
+        description: Text("Enjoy our services 😃"),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+
+      // Navigate to home screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
       );
     } catch (e) {
-      print(e);
-      // Show an error message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to log in: ${e.toString()}")),
-      );
-    }
+      // Catch Firebase Auth errors
+      String errorMessage = 'Login failed. Please try again';
 
-    setState(() {
-      _isLoading = false;
-    });
+      if (e is FirebaseAuthException) {
+        errorMessage = _handleFirebaseError(e.code);
+      }
+
+      // Show CherryToast with user-friendly error message
+      CherryToast.error(
+        title: Text("Login Error"),
+        description: Text(errorMessage),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _resetPassword(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email);
+
+      CherryToast.success(
+        title: Text("Success"),
+        description: Text("Password reset email sent."),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+
+      Navigator.pop(context); // Close the bottom sheet after sending the email
+    } catch (e) {
+      String errorMessage = 'Failed to send reset email';
+      if (e is FirebaseAuthException) {
+        if (e.code == 'user-not-found') {
+          errorMessage = 'Email does not exist in the database';
+        }
+      }
+      CherryToast.error(
+        title: Text("Error"),
+        description: Text(errorMessage),
+        animationDuration: Duration(milliseconds: 500),
+      ).show(context);
+    }
+  }
+
+  void _showForgotPasswordDialog() {
+    String email = ""; // Local variable to store email input
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // This allows the modal to resize above the keyboard
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder( // Use StatefulBuilder to control modal's state
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(context).viewInsets.bottom, // Padding above the keyboard
+                left: 16.0,
+                right: 16.0,
+                top: 16.0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Forgot Password",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      decoration: InputDecoration(
+                        hintText: "Enter your email",
+                        labelText: "Email",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey[200],
+                      ),
+                      onChanged: (value) {
+                        email = value.trim(); // Update the email input
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context); // Close the bottom sheet
+                          },
+                          child: const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            if (email.isNotEmpty) {
+                              setState(() {
+                                _resetLoading = true;  // Show loading in the reset button
+                              });
+                              _resetPassword(email);  // Call password reset
+                            } else {
+                              CherryToast.error(
+                                title: Text("Error"),
+                                description: Text("Please enter a valid email."),
+                                animationDuration: Duration(milliseconds: 500),
+                              ).show(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                          ),
+                          child: _resetLoading
+                              ? SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.0,
+                            ),
+                          )
+                              : const Text("Reset"),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Method to navigate to the registration page
+  void _navigateToRegister() {
+    Navigator.of(context).push(PageRouteBuilder(
+      pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        const offset = Offset(-1.0, 0.0); // Slide transition from left to right
+        var tween = Tween<Offset>(begin: offset, end: Offset.zero);
+        var offsetAnimation = animation.drive(tween);
+        return SlideTransition(position: offsetAnimation, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 300),
+    ));
   }
 
   @override
@@ -73,7 +248,6 @@ class _LoginScreenState extends State<LoginScreen> {
           color: Colors.white, // Set the back arrow color to white
         ),
       ),
-
       body: Stack(
         children: [
           Positioned(
@@ -89,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               child: Padding(
-                padding: EdgeInsets.only(top: 100,left: 20),
+                padding: EdgeInsets.only(top: 100, left: 20),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,11 +299,12 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 children: [
                   TextFormField(
-                    controller: _EmailController,
+                    controller: _emailController,
                     decoration: InputDecoration(
                       hintText: 'Email',
                       labelText: 'Email',
                       labelStyle: TextStyle(color: Colors.black54),
+                      errorText: _emailError,  // Show error next to email field
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -145,6 +320,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       hintText: 'Password',
                       labelText: 'Password',
                       labelStyle: TextStyle(color: Colors.black54),
+                      errorText: _passwordError,  // Show error next to password field
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(
@@ -152,13 +328,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       suffixIcon: IconButton(
                         icon: Icon(
-                          _obscureTextPassword ? Icons.visibility_off : Icons.visibility,
+                          _obscureTextPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
                         ),
                         onPressed: () {
                           setState(() {
                             _obscureTextPassword = !_obscureTextPassword;
                           });
                         },
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () {
+                        _showForgotPasswordDialog();
+                      },
+                      child: const Text(
+                        "Forgot Password?",
+                        style: TextStyle(
+                          color: Colors.blue,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -174,11 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.black),
-                      )
-                          : Text(
+                      child: Text(
                         'Login',
                         style: TextStyle(
                           fontSize: 16,
@@ -187,10 +378,41 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
+                  SizedBox(height: 16),
+                  // "Don’t have an account? Register now" clickable text
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Don’t have an account? ", style: TextStyle(color: Colors.grey)),
+                      GestureDetector(
+                        onTap: _navigateToRegister,
+                        child: Text(
+                          "Register now",
+                          style: TextStyle(
+                            color: Colors.blue,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
           ),
+          if (_isLoading)
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+              child: Container(
+                color: Colors.black.withOpacity(0.5),
+                child: Center(
+                  child: LoadingAnimationWidget.halfTriangleDot(
+                    color: Colors.black,
+                    size: 50,
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:quickalert/quickalert.dart'; // Import QuickAlert
 import '../AptitudeTopicPage.dart';
 
 class ProfileApp extends StatefulWidget {
@@ -21,8 +22,6 @@ class _ProfileAppState extends State<ProfileApp> {
   @override
   void initState() {
     super.initState();
-
-
     fetchUserDetails(); // Fetch the phone number and full name when the widget is initialized
   }
 
@@ -96,30 +95,21 @@ class _ProfileAppState extends State<ProfileApp> {
     );
   }
 
-  // Method to show a sign-out confirmation dialog
+  // Method to show a sign-out confirmation dialog using QuickAlert
   void _showSignOutDialog(BuildContext context) {
-    showDialog(
+    QuickAlert.show(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text("Sign Out"),
-          content: const Text("Are you sure you want to sign out?"),
-          actions: <Widget>[
-            TextButton(
-              child: const Text("Cancel"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-              },
-            ),
-            TextButton(
-              child: const Text("Sign Out"),
-              onPressed: () {
-                Navigator.of(context).pop(); // Close the dialog
-                _signOut(); // Call sign-out function
-              },
-            ),
-          ],
-        );
+      type: QuickAlertType.confirm,
+      text: 'Do you want to logout?',
+      confirmBtnText: 'Yes',
+      cancelBtnText: 'No',
+      confirmBtnColor: Colors.green,
+      onConfirmBtnTap: () {
+        Navigator.of(context).pop(); // Close the dialog
+        _signOut(); // Call sign-out function
+      },
+      onCancelBtnTap: () {
+        Navigator.of(context).pop(); // Close the dialog on cancel
       },
     );
   }
@@ -181,7 +171,7 @@ class _ProfileAppState extends State<ProfileApp> {
                                 ),
                               ],
                             ),
-                            // Three-dot menu
+                            // Three-dot menu for sign-out
                             PopupMenuButton<String>(
                               onSelected: (value) {
                                 if (value == 'sign_out') {
@@ -196,7 +186,7 @@ class _ProfileAppState extends State<ProfileApp> {
                                   ),
                                 ];
                               },
-                              icon: Icon(Icons.more_vert),
+                              icon: Icon(Icons.more_vert), // Three-dot icon
                             ),
                           ],
                         ),
@@ -292,7 +282,7 @@ class _ProfileAppState extends State<ProfileApp> {
             ),
             Expanded(
               child: ListView.builder(
-                padding: const EdgeInsets.symmetric( vertical: 8.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 itemCount: filteredCourses.length,
                 itemBuilder: (context, index) {
                   final course = filteredCourses[index];
@@ -350,7 +340,6 @@ class _ProfileAppState extends State<ProfileApp> {
               ),
             ),
             SizedBox(height: 40),
-
           ],
         );
       },

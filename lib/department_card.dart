@@ -48,7 +48,7 @@ class DepartmentCard extends StatelessWidget {
               ),
               child: Image.network(
                 imageUrl,
-                height: 130,
+                height: 110,
                 width: double.infinity,
                 fit: BoxFit.cover,
               ),

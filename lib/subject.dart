@@ -1,3 +1,5 @@
+import 'package:asmolg/MainScreeens/NotesPage.dart';
+import 'package:asmolg/MainScreeens/contentPreview.dart';
 import 'package:asmolg/NotificationController.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
@@ -5,8 +7,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
-import 'TopicsPage.dart';
 
 class SubjectPage extends StatefulWidget {
   final String departmentName;
@@ -105,8 +105,13 @@ class _SubjectPageState extends State<SubjectPage> {
                           final subjects = subjectsSnapshot.data!.docs.map((doc) {
                             final data = doc.data() as Map<String, dynamic>;
                             final String subjectId = doc.id; // Get the subject ID
+
+                            // Check if 'name' exists, if not, default to 'Team Asmolg'
+                            final String professorName = data.containsKey('name') ? data['name'] : 'Team Asmolg';
+
                             return {
                               'name': data['subject'] ?? 'Unknown Subject',
+                              'professorName': professorName, // Store the professor name or default value
                               'price': data['price'] ?? 'Free',
                               'subjectId': subjectId, // Store the subject ID
                             };
@@ -127,6 +132,7 @@ class _SubjectPageState extends State<SubjectPage> {
                               final subject = subjects[index];
                               return ModernSubjectCard(
                                 subjectName: subject['name']!,
+                                professorName: subject['professorName']!,
                                 price: subject['price']!,
                                 departmentId: widget.departmentName, // Pass the department ID
                                 subjectId: subject['subjectId']!, // Pass the subject ID
@@ -155,6 +161,7 @@ class _SubjectPageState extends State<SubjectPage> {
 
 class ModernSubjectCard extends StatefulWidget {
   final String subjectName;
+  final String professorName; // Add the professorName parameter
   final String price;
   final String departmentId;
   final String subjectId; // Add the subjectId parameter
@@ -162,6 +169,7 @@ class ModernSubjectCard extends StatefulWidget {
   const ModernSubjectCard({
     Key? key,
     required this.subjectName,
+    required this.professorName, // Mark professorName as required
     required this.price,
     required this.departmentId,
     required this.subjectId, // Mark subjectId as required
@@ -183,7 +191,6 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
         onNotificationCreatedMethod: NotificationController.onNotificationCreatedMethod,
         onNotificationDisplayedMethod: NotificationController.onNotificationDisplayedMethod,
         onDismissActionReceivedMethod: NotificationController.onDismissActionReceivedMethod);
-
 
     razorpay = Razorpay();
     razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, handlePaymentSuccess);
@@ -273,16 +280,15 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => TopicsPage(
-            subjectName: widget.subjectName,
-            subjectId: widget.subjectId,
-            departmentName: widget.departmentId,
+          builder: (context) => NotesPage(
+            departmentDocId: widget.departmentId, // Pass departmentDocId
+            subjectDocId: widget.subjectId,       // Pass subjectDocId
+            subjectName: widget.subjectName,       // Pass subjectDocId
           ),
         ),
       );
     }
   }
-
 
   void handlePaymentError(PaymentFailureResponse response) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -310,38 +316,28 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => TopicsPage(
-            subjectName: widget.subjectName,
-            subjectId: widget.subjectId,
-            departmentName: widget.departmentId,
+          builder: (context) => NotesPage(
+            departmentDocId: widget.departmentId, // Pass departmentDocId
+            subjectDocId: widget.subjectId,       // Pass subjectDocId
+            subjectName: widget.subjectName,       // Pass subjectDocId
           ),
         ),
       );
       return;
     }
 
-    double amountInDollars = double.parse(widget.price);
-    int amountInPaise = (amountInDollars * 100).toInt();
-
-    var options = {
-      'key': 'rzp_live_ibSut8YutP655P',
-      //rzp_test_OEmhF25x1IT9oO
-      //rzp_live_ibSut8YutP655P
-      'amount': amountInPaise.toString(),
-      'name': widget.subjectName,
-      'description': 'Purchase for ${widget.subjectName}',
-      'prefill': {
-        'contact': await _getUserMobileNumber(user.email ?? ''),
-        'Email': user.email,
-      },
-      'theme': {'color': '#F37254'},
-    };
-
-    try {
-      razorpay.open(options);
-    } catch (e) {
-      print('Error: $e');
-    }
+    // If not subscribed, redirect to ContentPreviewPage with data
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ContentPreviewPage(
+          departmentName: widget.departmentId,
+          subjectName: widget.subjectName,
+          subjectId: widget.subjectId,
+          price: widget.price,
+        ),
+      ),
+    );
   }
 
   Future<String> _getUserMobileNumber(String Email) async {
@@ -365,10 +361,10 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => TopicsPage(
-                subjectName: widget.subjectName,
-                subjectId: widget.subjectId,
-                departmentName: widget.departmentId,
+              builder: (context) => NotesPage(
+                departmentDocId: widget.departmentId, // Pass departmentDocId
+                subjectDocId: widget.subjectId,       // Pass subjectDocId
+                subjectName: widget.subjectName,       // Pass subjectDocId
               ),
             ),
           );
@@ -410,7 +406,31 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
               ),
               const SizedBox(height: 8),
 
-              // Second row: Notes Icon and Price or "Subscribed"
+              // Second row: Professor Name
+              Row(
+                children: [
+                  const FaIcon(
+                    FontAwesomeIcons.user,
+                    color: Colors.blueAccent,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      widget.professorName,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 8),
+
+              // Third row: Notes Icon and Price or "Subscribed"
               Row(
                 children: [
                   const FaIcon(
@@ -431,7 +451,6 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 8),
             ],
           ),

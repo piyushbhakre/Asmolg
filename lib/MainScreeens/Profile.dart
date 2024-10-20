@@ -1,10 +1,10 @@
 import 'package:asmolg/Authentication/LoginPage.dart';
+import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../AptitudeTopicPage.dart';
-import '../TopicsPage.dart';
 
 class ProfileApp extends StatefulWidget {
   @override
@@ -312,10 +312,10 @@ class _ProfileAppState extends State<ProfileApp> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => TopicsPage(
+                            builder: (context) => NotesPage(
                               subjectName: course['content'],
-                              subjectId: course['subject_id'], // Pass the subjectId
-                              departmentName: course['department_name'] ?? 'Unknown',
+                              subjectDocId: course['subject_id'], // Pass the subjectId
+                              departmentDocId: course['department_name'] ?? 'Unknown',
                             ),
                           ),
                         );

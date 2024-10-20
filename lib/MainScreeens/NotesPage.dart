@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-
 import '../fileViewer.dart';
 
 class NotesPage extends StatefulWidget {
-  final String topicName;
   final String departmentDocId; // ID of the department document
   final String subjectDocId;    // ID of the subject document
+  final String subjectName;    // Subject name
 
   const NotesPage({
     Key? key,
-    required this.topicName,
     required this.departmentDocId,
     required this.subjectDocId,
+    required this.subjectName,
   }) : super(key: key);
 
   @override
@@ -24,30 +23,28 @@ class _NotesPageState extends State<NotesPage> {
   String _searchTerm = ''; // Holds the search term entered by the user
   final TextEditingController _searchController = TextEditingController();
 
-  // Function to fetch notes from Firestore under the content subcollection
+  // Function to fetch notes from Firestore under the 'content' sub-collection
   Future<QuerySnapshot> fetchNotes() {
+    // Query the 'notes' collection where 'department' field matches the departmentDocId
     return FirebaseFirestore.instance
         .collection('notes')
-        .doc(widget.departmentDocId) // Department document ID
-        .collection('subjects')
-        .doc(widget.subjectDocId) // Subject document ID
-        .collection('topics')
-        .where('topic', isEqualTo: widget.topicName) // Filter by topic name
+        .where('department', isEqualTo: widget.departmentDocId) // Match the department field
         .get()
-        .then((topicSnapshot) {
-      if (topicSnapshot.docs.isNotEmpty) {
-        String topicDocId = topicSnapshot.docs.first.id;
+        .then((QuerySnapshot notesSnapshot) async {
+      if (notesSnapshot.docs.isNotEmpty) {
+        // Assume there's only one matching document in 'notes' collection for this department
+        final departmentDocId = notesSnapshot.docs.first.id;
+
+        // Now query the subjects sub-collection under the matching document
         return FirebaseFirestore.instance
             .collection('notes')
-            .doc(widget.departmentDocId)
+            .doc(departmentDocId) // The matched department document
             .collection('subjects')
-            .doc(widget.subjectDocId)
-            .collection('topics')
-            .doc(topicDocId)
-            .collection('content') // Content subcollection
+            .doc(widget.subjectDocId) // Subject document ID
+            .collection('content') // Content sub-collection
             .get();
       } else {
-        throw Exception('No content found for the selected topic.');
+        throw Exception('No department found matching the provided departmentDocId.');
       }
     });
   }
@@ -57,7 +54,7 @@ class _NotesPageState extends State<NotesPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('${widget.topicName}'),
+        title: Text(widget.subjectName),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -111,10 +108,11 @@ class _NotesPageState extends State<NotesPage> {
                       return const Center(child: Text('No notes found for this topic.'));
                     }
 
+                    // Filter notes based on search term
                     final filteredNotes = notesData.where((doc) {
-                      final note = doc.data() as Map<String, dynamic>;
-                      final noteName = note['content']?.toLowerCase() ?? 'unknown';
-                      return noteName.contains(_searchTerm); // Filter based on search term
+                      final noteData = doc.data() as Map<String, dynamic>;
+                      final noteName = noteData['content']?.toLowerCase() ?? 'unknown';
+                      return noteName.contains(_searchTerm);
                     }).toList();
 
                     if (filteredNotes.isEmpty) {
@@ -125,15 +123,23 @@ class _NotesPageState extends State<NotesPage> {
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index].data() as Map<String, dynamic>;
+
+                        // Ensure required fields exist
+                        final noteName = note['content'] ?? 'Unknown';
+                        final uploadedDate = note['uploadedDate'] ?? 'Unknown Date';
+                        final fileUrl = note['fileURL'] ?? '#';
+                        final fileType = note['type'] ?? 'pdf'; // Default to 'pdf'
+
                         return ModernNoteCard(
-                          noteName: note['content'] ?? 'Unknown',
-                          uploadedDate: note['uploadedDate'] ?? 'Unknown Date',
-                          fileUrl: note['fileURL'] ?? '#',
-                          fileType: note['type'] ?? 'pdf', // Default to 'pdf' if type is missing
+                          noteName: noteName,
+                          uploadedDate: uploadedDate,
+                          fileUrl: fileUrl,
+                          fileType: fileType,
                         );
                       },
                     );
                   }
+
                   return const Center(child: Text('No notes found.'));
                 },
               ),
@@ -145,9 +151,10 @@ class _NotesPageState extends State<NotesPage> {
   }
 }
 
+// ModernNoteCard widget for displaying individual notes
 class ModernNoteCard extends StatelessWidget {
   final String noteName;
-  final dynamic uploadedDate; // Change to dynamic to handle both String and Timestamp
+  final dynamic uploadedDate; // Can be either String or Timestamp
   final String fileUrl;  // URL to the file
   final String fileType; // 'pdf', 'ppt', or 'word'
 
@@ -167,17 +174,24 @@ class ModernNoteCard extends StatelessWidget {
       DateTime date = uploadedDate.toDate(); // Convert Timestamp to DateTime
       formattedDate = "${date.day}/${date.month}/${date.year}"; // Format the date
     } else {
-      formattedDate = uploadedDate.toString(); // If it's already a string, use it directly
+      formattedDate = uploadedDate.toString(); // If it's a string, use it directly
     }
 
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FileViewerPage(fileUrl: fileUrl),
-          ),
-        );
+        if (fileUrl != '#' && fileUrl.isNotEmpty) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FileViewerPage(fileUrl: fileUrl),
+            ),
+          );
+        } else {
+          // Show a message if file URL is not available
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('File URL not available')),
+          );
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16.0), // Space between cards
@@ -206,9 +220,9 @@ class ModernNoteCard extends StatelessWidget {
                     ? FontAwesomeIcons.filePowerpoint
                     : FontAwesomeIcons.fileWord, // File type icon
                 color: fileType == 'pdf'
-                    ? Colors.blue
+                    ? Colors.red
                     : fileType == 'ppt'
-                    ? Colors.blue
+                    ? Colors.orange
                     : Colors.blue,
                 size: 25, // Larger icon
               ),

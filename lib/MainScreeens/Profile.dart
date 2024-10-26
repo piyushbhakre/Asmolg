@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:quickalert/quickalert.dart'; // Import QuickAlert
+import 'package:intl/intl.dart'; // Import intl for date formatting
 import '../AptitudeTopicPage.dart';
 
 class ProfileApp extends StatefulWidget {
@@ -286,9 +287,21 @@ class _ProfileAppState extends State<ProfileApp> {
                 itemCount: filteredCourses.length,
                 itemBuilder: (context, index) {
                   final course = filteredCourses[index];
+
+                  // Format the purchase date
+                  String formattedDate;
+                  if (course['date'] is Timestamp) {
+                    formattedDate = DateFormat('dd-MM-yyyy').format((course['date'] as Timestamp).toDate());
+                  } else if (course['date'] is String) {
+                    DateTime parsedDate = DateTime.tryParse(course['date']) ?? DateTime.now();
+                    formattedDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+                  } else {
+                    formattedDate = 'Unknown Date';
+                  }
+
                   return GestureDetector(
                     onTap: () {
-                      // Check if the course is an aptitude or a regular subject
+                      // Navigate based on whether it’s an aptitude or a regular subject
                       if (course['isAptitude'] == true) {
                         Navigator.push(
                           context,
@@ -331,7 +344,7 @@ class _ProfileAppState extends State<ProfileApp> {
                           course['content'],
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Purchased on: ${course['date']}'),
+                        subtitle: Text('Purchased on: $formattedDate'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                       ),
                     ),
@@ -339,10 +352,11 @@ class _ProfileAppState extends State<ProfileApp> {
                 },
               ),
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
           ],
         );
       },
     );
   }
 }
+

@@ -61,6 +61,9 @@ dependencies:
   connectivity_plus: ^5.0.2
   cherry_toast: ^1.11.0
   quickalert: ^1.1.0
+  flutter_upgrade_version: ^1.1.6
+  package_info_plus: ^8.1.0
+  fluttertoast: ^8.2.8
 
 
 dev_dependencies:

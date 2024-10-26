@@ -1,12 +1,15 @@
+import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/fileViewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http; // Import HTTP package
+import 'package:http/http.dart' as http;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'dart:convert'; // For JSON encoding/decoding
+import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
+import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'dart:convert';
 
 class ContentPreviewPage extends StatefulWidget {
   final String departmentName;
@@ -29,6 +32,7 @@ class ContentPreviewPage extends StatefulWidget {
 class _ContentPreviewPageState extends State<ContentPreviewPage> {
   late Razorpay _razorpay;
   bool _isSubscribed = false;
+  bool _isLoading = false; // Track loading state
 
   @override
   void initState() {
@@ -55,7 +59,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
 
       if (notesSnapshot.docs.isNotEmpty) {
         for (var noteDoc in notesSnapshot.docs) {
-          // Navigate to the subjects sub-collection
           QuerySnapshot subjectSnapshot = await FirebaseFirestore.instance
               .collection('notes')
               .doc(noteDoc.id)
@@ -64,7 +67,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
 
           for (var subjectDoc in subjectSnapshot.docs) {
             if (subjectDoc.id == widget.subjectId) {
-              // Navigate to the content sub-collection
               QuerySnapshot contentSnapshot = await FirebaseFirestore.instance
                   .collection('notes')
                   .doc(noteDoc.id)
@@ -75,9 +77,9 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
 
               for (var contentDoc in contentSnapshot.docs) {
                 pdfFiles.add({
-                  'content': contentDoc['content'], // Title of the PDF
-                  'fileURL': contentDoc['fileURL'], // URL of the PDF
-                  'isPaid': contentDoc['isPaid'], // Boolean flag for payment status
+                  'content': contentDoc['content'],
+                  'fileURL': contentDoc['fileURL'],
+                  'isPaid': contentDoc['isPaid'],
                 });
               }
               break;
@@ -86,9 +88,13 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
         }
       }
     } catch (e) {
-      print('Error fetching PDFs: $e');
+      CherryToast.error(
+        title: const Text('Error'),
+        displayIcon: true,
+        description: Text('Error fetching PDFs: $e'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
     }
-
     return pdfFiles;
   }
 
@@ -96,9 +102,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     User? user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to make a purchase.')),
-      );
+      CherryToast.error(
+        title: const Text('Error'),
+        displayIcon: true,
+        description: const Text('Please log in to make a purchase.'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
       return;
     }
 
@@ -116,13 +125,21 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       return;
     }
 
-    // Fetch order ID from backend before opening checkout
+    setState(() {
+      _isLoading = true; // Show loading overlay
+    });
+
     String orderId = await _fetchOrderId();
     if (orderId.isEmpty) {
-      // Handle the case where order ID could not be retrieved
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create order.')),
-      );
+      setState(() {
+        _isLoading = false;
+      });
+      CherryToast.error(
+        title: const Text('Error'),
+        displayIcon: true,
+        description: const Text('Failed to create order.'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
       return;
     }
 
@@ -131,10 +148,10 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       'amount': (double.parse(widget.price) * 100).toInt().toString(),
       'name': widget.subjectName,
       'description': 'Purchase for ${widget.subjectName}',
-      'order_id': orderId, // Set order ID here
+      'order_id': orderId,
       'prefill': {
-        'contact': '', // Add the user's contact information here
-        'email': '', // Add the user's email here
+        'contact': '',
+        'email': '',
       },
       'theme': {'color': '#F37254'},
     };
@@ -142,25 +159,28 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     try {
       _razorpay.open(options);
     } catch (e) {
-      print('Error: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error opening Razorpay checkout: $e');
     }
   }
 
   Future<String> _fetchOrderId() async {
     try {
       final response = await http.post(
-        Uri.parse('https://razorpay-integration-o5dn.onrender.com/create-order'), // Replace with your server URL
+        Uri.parse(CREATE_ORDER_ID),
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
         body: jsonEncode(<String, dynamic>{
-          'amount': (double.parse(widget.price) * 100).toInt(), // Price in paise
+          'amount': (double.parse(widget.price) * 100).toInt(),
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['orderId']; // Return the order ID
+        return data['orderId'];
       } else {
         print('Failed to create order: ${response.body}');
         return '';
@@ -171,18 +191,15 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     }
   }
 
-  Future<String> _getUserMobileNumber(String Email) async {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(Email).get();
-    return userDoc['MobileNumber'] ?? '0000000000';
-  }
-
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    setState(() {
+      _isLoading = false; // Hide loading overlay
+    });
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       String userEmail = user.email ?? '';
       String mobileNo = await _getUserMobileNumber(userEmail);
 
-      // Add `subject_id` in Subscriptions collection
       await FirebaseFirestore.instance.collection('users').doc(userEmail).set({
         'bought_content': FieldValue.arrayUnion([{
           'subject_name': widget.subjectName,
@@ -217,12 +234,15 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
         ),
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment Successful! You now have access to topics.')),
-      );
+      CherryToast.success(
+        title: const Text('Success'),
+        displayIcon: true,
+        description: const Text('Payment Successful! You now have access to topics.'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
 
       setState(() {
-        _isSubscribed = true; // Mark the course as subscribed after successful payment
+        _isSubscribed = true;
       });
 
       Navigator.pushReplacement(
@@ -239,121 +259,157 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Payment Failed: ${response.message}')),
-    );
+    setState(() {
+      _isLoading = false;
+    });
+    CherryToast.error(
+      title: const Text('Payment Failed'),
+      displayIcon: true,
+      description: Text('Payment Failed: ${response.message}'),
+      animationDuration: const Duration(milliseconds: 500),
+    ).show(context);
   }
 
   void _handleExternalWallet(ExternalWalletResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('External Wallet Used: ${response.walletName}')),
-    );
+    CherryToast.info(
+      title: const Text('External Wallet Used'),
+      displayIcon: true,
+      description: Text('External Wallet Used: ${response.walletName}'),
+      animationDuration: const Duration(milliseconds: 500),
+    ).show(context);
+  }
+
+  Future<String> _getUserMobileNumber(String email) async {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(email).get();
+    return userDoc['MobileNumber'] ?? '0000000000';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        centerTitle: true,
-        title: Text(
-          widget.departmentName,
-          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-        ),
-        iconTheme: const IconThemeData(color: Colors.black),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    widget.subjectName,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
+    return Stack(
+      children: [
+        Scaffold(
+          backgroundColor: Colors.white,
+          appBar: AppBar(
+            backgroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            title: Text(
+              widget.departmentName,
+              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
-            Center(
-              child: SizedBox(
-                width: 360,
-                child: ElevatedButton(
-                  onPressed: _openCheckout,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    backgroundColor: Colors.blue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
+            iconTheme: const IconThemeData(color: Colors.black),
+          ),
+          body: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16.0),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text(
-                    'Buy for ₹ ${widget.price}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        widget.subjectName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: SizedBox(
+                    width: 360,
+                    child: ElevatedButton(
+                      onPressed: _openCheckout,
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        backgroundColor: Colors.blue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Text(
+                        'Buy for ₹ ${widget.price}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Content',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: FutureBuilder<List<Map<String, dynamic>>>(
-                future: _fetchPDFFiles(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return const Center(child: Text('Error loading PDFs'));
-                  }
+                const SizedBox(height: 20),
+                const Text(
+                  'Content',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _fetchPDFFiles(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        CherryToast.error(
+                          title: const Text('Error'),
+                          displayIcon: true,
+                          description: const Text('Error loading PDFs'),
+                          animationDuration: const Duration(milliseconds: 500),
+                        ).show(context);
+                        return const Center(child: Text('Error loading PDFs'));
+                      }
 
-                  if (snapshot.hasData && snapshot.data!.isNotEmpty) {
-                    List<Map<String, dynamic>> pdfFiles = snapshot.data!;
-
-                    return ListView.builder(
-                      itemCount: pdfFiles.length,
-                      itemBuilder: (context, index) {
-                        final pdfFile = pdfFiles[index];
-                        return PDFCard(
-                          title: pdfFile['content'],
-                          fileURL: pdfFile['fileURL'],
-                          isPaid: pdfFile['isPaid'],
+                      if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                        List<Map<String, dynamic>> pdfFiles = snapshot.data!;
+                        return ListView.builder(
+                          itemCount: pdfFiles.length,
+                          itemBuilder: (context, index) {
+                            final pdfFile = pdfFiles[index];
+                            return PDFCard(
+                              title: pdfFile['content'],
+                              fileURL: pdfFile['fileURL'],
+                              isPaid: pdfFile['isPaid'],
+                            );
+                          },
                         );
-                      },
-                    );
-                  } else {
-                    return const Center(child: Text('No PDFs available'));
-                  }
-                },
+                      } else {
+                        return const Center(child: Text('No PDFs available'));
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Loading Overlay
+        if (_isLoading)
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.6),
+              child: Center(
+                child: LoadingAnimationWidget.halfTriangleDot(
+                  color: Colors.black,
+                  size: 50,
+                ),
               ),
             ),
-          ],
-        ),
-      ),
+          ),
+      ],
     );
   }
 }

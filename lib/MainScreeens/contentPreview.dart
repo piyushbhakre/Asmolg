@@ -402,13 +402,28 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
             child: Container(
               color: Colors.black.withOpacity(0.6),
               child: Center(
-                child: LoadingAnimationWidget.halfTriangleDot(
-                  color: Colors.black,
-                  size: 50,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    LoadingAnimationWidget.halfTriangleDot(
+                      color: Colors.white,
+                      size: 50,
+                    ),
+                    SizedBox(height: 20),
+                    Text(
+                      "Loading, please wait 🕒. \nThis may take more than a minute ⏳.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: Colors.yellow,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
           ),
+
       ],
     );
   }

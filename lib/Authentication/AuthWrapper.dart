@@ -39,12 +39,41 @@ class _AuthWrapperState extends State<AuthWrapper> {
       barrierDismissible: false,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Update Required"),
-          content: const Text("A new version of the app is available. Please update to continue."),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15.0),
+          ),
+          backgroundColor: Colors.white,
+          title: Row(
+            children: [
+              Icon(Icons.update, color: Colors.blue, size: 28),
+              const SizedBox(width: 8),
+              const Text(
+                "Update Required",
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+              ),
+            ],
+          ),
+          content: const Text(
+            "A new version of the app is available. Please update to continue.",
+            style: TextStyle(fontSize: 16, color: Colors.black87),
+          ),
           actions: [
-            ElevatedButton(
-              onPressed: _startUpdate,
-              child: const Text("Update Now"),
+            Container(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: _startUpdate,
+                child: const Text(
+                  "Update Now",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ),
             ),
           ],
         );

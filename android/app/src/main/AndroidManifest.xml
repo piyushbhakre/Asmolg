@@ -34,7 +34,7 @@
               />
             <meta-data
                 android:name="com.onesignal.NotificationIcon"
-                android:resource="@drawable/logo.png" />
+                android:resource="@drawable/logo" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>

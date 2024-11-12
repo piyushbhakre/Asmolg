@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_wrapper/connectivity_wrapper.dart';
+import 'package:onesignal_flutter/onesignal_flutter.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase if it hasn’t been already
@@ -51,6 +52,14 @@ Future<void> main() async {
 
   // Set up Firebase Messaging and handle messages
   await setupFirebaseMessaging();
+
+  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
+
+  OneSignal.initialize("cd32a0b0-2476-4529-9a20-965b26b5eb5e");
+
+  OneSignal.Notifications.requestPermission(true);
+
+
 
   runApp(const MyApp());
 }
@@ -105,6 +114,7 @@ Future<void> setupFirebaseMessaging() async {
       ),
     );
   });
+
 
   // Handle when the user taps on the notification and opens the app
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {

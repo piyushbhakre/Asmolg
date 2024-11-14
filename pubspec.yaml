@@ -107,6 +107,7 @@ flutter:
     - assets/logo.png
     - assets/otp.jpg
     - assets/number.jpg
+    - assets/tp.png
     - assets/adiphoto.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see

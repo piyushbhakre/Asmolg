@@ -70,11 +70,11 @@ class _ProfileAppState extends State<ProfileApp> {
           setState(() {
             boughtCourses = subjects.map((item) {
               return {
-                "content": item['aptitude_name'] ?? item['subject_name'] ?? 'Unknown Content',
+                "content": item['course_name'] ?? item['subject_name'] ?? 'Unknown Content',
                 "date": item['date'] ?? 'Unknown Date',
                 "department_name": item['department_name'] ?? 'Unknown Department',
                 "subject_id": item['subject_id'] ?? '', // Store the subject_id here
-                "isAptitude": item.containsKey('aptitude_name'), // Determine if it's an aptitude
+                "isAptitude": item.containsKey('course_name'), // Determine if it's an aptitude
               };
             }).toList();
           });

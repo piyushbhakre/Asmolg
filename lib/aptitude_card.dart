@@ -50,7 +50,7 @@ class _AptitudeCardState extends State<AptitudeCard> {
       if (userDoc.exists) {
         List<dynamic> boughtContent = userDoc['bought_content'];
         for (var content in boughtContent) {
-          if (content['aptitude_name'] == widget.title) { // Check by aptitude name
+          if (content['course_name'] == widget.title) { // Check by aptitude name
             setState(() {
               _isSubscribed = true; // User is subscribed
             });
@@ -67,10 +67,9 @@ class _AptitudeCardState extends State<AptitudeCard> {
       String userEmail = user.email ?? '';
       String mobileNo = await _getUserMobileNumber(userEmail);
 
-      // Add `aptitude_name` in Subscriptions collection
       await FirebaseFirestore.instance.collection('users').doc(userEmail).set({
         'bought_content': FieldValue.arrayUnion([{
-          'aptitude_name': widget.title,
+          'course_name': widget.title,
           'price': widget.price,
           'date': DateTime.now().toIso8601String(),
           'mobile_no': mobileNo,
@@ -78,10 +77,9 @@ class _AptitudeCardState extends State<AptitudeCard> {
         }]),
       }, SetOptions(merge: true));
 
-      // Add `aptitude_name` in Subscriptions collection
       await FirebaseFirestore.instance.collection('Subscriptions').doc(userEmail).set({
         'bought_content': FieldValue.arrayUnion([{
-          'aptitude_name': widget.title,
+          'course_name': widget.title,
           'price': widget.price,
           'date': DateTime.now().toIso8601String(),
           'mobile_no': mobileNo,
@@ -122,7 +120,18 @@ class _AptitudeCardState extends State<AptitudeCard> {
     }
 
     if (_isSubscribed) {
-      // User is already subscribed; navigate to content
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AptitudeTopicPage(
+            aptitudeName: widget.title,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (widget.price == 'Free') {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -174,56 +183,55 @@ class _AptitudeCardState extends State<AptitudeCard> {
         openCheckout(); // Open checkout process on tap
       },
       child: Container(
-        width: 140,
+        width: 160,
         margin: const EdgeInsets.only(right: 16.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12.0),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26,
-              blurRadius: 4.0,
-              offset: Offset(1, 1),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: Colors.grey.shade300, // Outline color
+            width: 1.5, // Outline width
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image section
+            // Image section with rounded corners at the top
             ClipRRect(
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12.0),
-                topRight: Radius.circular(12.0),
+                topLeft: Radius.circular(8.0),
+                topRight: Radius.circular(8.0),
               ),
-              child: Image.network(
+              child: Image.asset(
                 widget.imageUrl,
-                height: 100,
+                height: 120,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                fit: BoxFit.fill,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     widget.title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.black87,
-                      fontWeight: FontWeight.bold
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    _isSubscribed ? 'Subscribed' : 'Price: ₹ ${widget.price}', // Show subscribed if true
+                    _isSubscribed
+                        ? 'Subscribed'
+                        : widget.price == 'Free'
+                        ? 'Free'
+                        : 'Price: ₹ ${widget.price}',
                     style: TextStyle(
                       fontSize: 14,
-                      color: _isSubscribed
-                          ? Colors.green
-                          : widget.price == 'Free'
+                      color: _isSubscribed || widget.price == 'Free'
                           ? Colors.green
                           : Colors.blueGrey,
                       fontWeight: FontWeight.bold,

@@ -18,7 +18,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final CollectionReference _departmentCollection = FirebaseFirestore.instance.collection('notes');
   final CollectionReference _carouselCollection = FirebaseFirestore.instance.collection('Carousel Ads');
-  final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore.instance.collection('Aptitude');
+  final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore.instance.collection('aptitude');
 
   late List<AptitudeCard> aptitudeCourses = [];
   List<DepartmentCard> departmentCards = [];
@@ -29,7 +29,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Prevent screenshots when the app is running
     ScreenProtector.preventScreenshotOn();
     fetchDepartments();
     fetchAptitudeCourses();
@@ -84,13 +83,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final QuerySnapshot snapshot = await _aptitudeCoursesCollection.get();
       final List<AptitudeCard> courses = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>?;
-        final String? bannerUrl = data?['bannerUrl'];
+
+        const String defaultImagePath = 'assets/tp.png';
         final String title = data?['course_name'] ?? 'Unknown Course';
-        final String price = data?['price'] ?? 'Free';
+        final String price = data?['price']?.toString() ?? 'Free';
         final String description = data?['description'] ?? 'No description available.';
 
         return AptitudeCard(
-          imageUrl: bannerUrl ?? 'https://via.placeholder.com/150',
+          imageUrl: defaultImagePath,  // Always use asset image path
           title: title,
           price: price,
           description: description,
@@ -106,6 +106,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -113,8 +115,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
-            backgroundColor: Colors.white,
             elevation: 0,
+            backgroundColor: Colors.white,
             title: const Text(
               'Home',
               style: TextStyle(
@@ -123,17 +125,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             actions: [
-              // IconButton(
-              //   icon: const Icon(
-              //     Icons.notifications,
-              //     color: Colors.black,
-              //   ),
-              //   onPressed: () {
-              //     ScaffoldMessenger.of(context).showSnackBar(
-              //       const SnackBar(content: Text('Notifications clicked')),
-              //     );
-              //   },
-              // ),
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: CircleAvatar(
@@ -167,23 +158,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           builder: (BuildContext context) {
                             return Container(
                               width: MediaQuery.of(context).size.width,
-                              margin: const EdgeInsets.symmetric(horizontal: 10.0),
+                              margin: const EdgeInsets.symmetric(horizontal: 1.0),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15.0),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey.withOpacity(0.5),
-                                    spreadRadius: 4,
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 3),
-                                  ),
-                                ],
+
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(15.0),
-                                child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                    ),
+
+
+                                  ],
                                 ),
                               ),
                             );
@@ -195,7 +186,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // Departments Section
                   _buildSectionHeader(
-                    title: 'Engineering Departments',
+                    title: 'Engineering',
+                    icon: Icons.school,
                     onSeeAllPressed: () {
                       Navigator.push(
                         context,
@@ -212,7 +204,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
                   // Aptitude Courses Section
                   _buildSectionHeader(
-                    title: 'Aptitude Courses',
+                    title: 'T & P',
+                    icon: Icons.lightbulb,
                     onSeeAllPressed: () {
                       Navigator.push(
                         context,
@@ -238,7 +231,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.white.withOpacity(0.8),
             child: Center(
               child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Colors.blue,
+                color: Colors.blueAccent,
                 size: 50,
               ),
             ),
@@ -247,25 +240,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Padding _buildSectionHeader({required String title, required VoidCallback onSeeAllPressed}) {
+  Padding _buildSectionHeader({required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
-            ),
+          Row(
+            children: [
+              Icon(icon, color: Colors.blueAccent),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
           ),
           TextButton(
             onPressed: onSeeAllPressed,
             child: const Text(
               'See All',
-              style: TextStyle(color: Colors.blue),
+              style: TextStyle(color: Colors.blueAccent),
             ),
           ),
         ],
@@ -276,10 +275,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Container _buildHorizontalList(List<dynamic> items) {
     return Container(
       height: 200,
-      child: ListView(
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        children: items.cast<Widget>(), // Casting items to List<Widget>
+        itemCount: items.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: items[index] as Widget,
+          );
+        },
       ),
     );
   }

@@ -5,8 +5,6 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import 'fileViewer.dart'; // PDF Viewer
 
-
-
 class AptitudeTopicPage extends StatefulWidget {
   final String aptitudeName;
 
@@ -26,7 +24,7 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
   // Fetch aptitude topics along with file URLs
   Future<QuerySnapshot> getAptitudeTopics() {
     return FirebaseFirestore.instance
-        .collection('Aptitude')
+        .collection('aptitude')
         .where('course_name', isEqualTo: widget.aptitudeName)
         .get()
         .then((querySnapshot) {
@@ -42,7 +40,7 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('${widget.aptitudeName} Topics'),
+        title: Text('${widget.aptitudeName}'),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -95,18 +93,17 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
                       return const Center(child: Text('No topics found.'));
                     }
 
-                    // Fetch both topic_name, fileUrl, and uploadedDate for each topic
+                    // Fetch topic_name, fileUrl, and formatted uploadedDate for each topic
                     final topics = topicsDocs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
 
-                      // Handle Timestamp conversion to String
+                      // Format ISO string to `dd-MM-yyyy`
                       String formattedDate = '';
-                      if (data['uploadedDate'] != null && data['uploadedDate'] is Timestamp) {
-                        Timestamp timestamp = data['uploadedDate'];
-                        DateTime dateTime = timestamp.toDate();
-                        formattedDate = "${dateTime.day}/${dateTime.month}/${dateTime.year} at ${dateTime.hour}:${dateTime.minute}";
+                      if (data['uploadedDate'] != null && data['uploadedDate'] is String) {
+                        DateTime dateTime = DateTime.parse(data['uploadedDate']);
+                        formattedDate = "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
                       } else {
-                        formattedDate = data['uploadedDate'] ?? 'Unknown Date';
+                        formattedDate = 'Unknown Date';
                       }
 
                       return {
@@ -119,7 +116,6 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
                       return topic['topic_name'].toLowerCase().contains(_searchTerm);
                     }).toList();
 
-
                     if (topics.isEmpty) {
                       return const Center(child: Text('No topics match your search.'));
                     }
@@ -131,8 +127,7 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
                         return AptitudeTopicCard(
                           topicName: topic['topic_name'],
                           fileUrl: topic['fileUrl'], // Pass the fileUrl
-                          uploadedDate: topic['uploadedDate'], // Pass the fileUrl
-
+                          uploadedDate: topic['uploadedDate'], // Pass the formatted date
                         );
                       },
                     );
@@ -221,7 +216,7 @@ class AptitudeTopicCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 8), // Space between name and extra information
                   Text(
-                    'Uploaded:- $uploadedDate', // Display the formatted date
+                    'Uploaded: $uploadedDate', // Display the formatted date
                     style: const TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.bold,

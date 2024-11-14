@@ -1,8 +1,8 @@
 import 'package:asmolg/Support.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // For SystemChrome and hiding system UI
+import 'package:flutter/services.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:flashy_tab_bar2/flashy_tab_bar2.dart'; // Import flashy_tab_bar2
+import 'package:flashy_tab_bar2/flashy_tab_bar2.dart';
 import 'Profile.dart';
 import 'DashboardScreen.dart';
 
@@ -26,42 +26,47 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
 
-    // Hide only the system navigation bar for a true fullscreen experience
+    // Hide the system navigation bar for fullscreen
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.manual, overlays: [SystemUiOverlay.top]);
 
     // Make the status bar transparent
     SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent, // Transparent status bar
-      statusBarIconBrightness: Brightness.light, // Light status bar icons
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
     ));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Extend body behind the bottom navigation bar
+      extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // Background gradient for a modern look
+          // Background gradient for a modern educational look
           Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF4A90E2), // Top gradient color
-                  Color(0xFF50B2C0), // Bottom gradient color
+                  Color(0xFF3A7BD5), // Deep blue at the top
+                  Color(0xFF00D2FF), // Light blue at the bottom
                 ],
               ),
             ),
           ),
-          // Page content
+          // Subtle overlay for better contrast
+          Container(
+            color: Colors.black.withOpacity(0.04),
+          ),
+          // Page content based on selected index
           _pages[_currentIndex],
         ],
       ),
       bottomNavigationBar: FlashyTabBar(
         selectedIndex: _currentIndex,
-        showElevation: true, // Show a shadow/elevation effect
+        showElevation: true,
+        animationDuration: Duration(milliseconds: 300),
         onItemSelected: (index) {
           setState(() {
             _currentIndex = index;
@@ -69,19 +74,19 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         items: [
           FlashyTabBarItem(
-            icon: const Icon(FontAwesomeIcons.home),
-            title: const Text('Home'),
-            activeColor: Colors.blue, // Highlight in blue when active
+            icon: const Icon(FontAwesomeIcons.bookReader),
+            title: const Text('Courses'),
+            activeColor: Color(0xFF3366FF), // Educational color theme
           ),
           FlashyTabBarItem(
-            icon: const Icon(FontAwesomeIcons.userAstronaut),
+            icon: const Icon(FontAwesomeIcons.userGraduate),
             title: const Text('Profile'),
-            activeColor: Colors.blue, // Highlight in blue when active
+            activeColor: Color(0xFF3366FF),
           ),
           FlashyTabBarItem(
-            icon: const Icon(FontAwesomeIcons.questionCircle),
+            icon: const Icon(FontAwesomeIcons.headset),
             title: const Text('Support'),
-            activeColor: Colors.blue, // Highlight in blue when active
+            activeColor: Color(0xFF3366FF),
           ),
         ],
       ),

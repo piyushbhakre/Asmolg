@@ -24,18 +24,15 @@ class DepartmentCard extends StatelessWidget {
         );
       },
       child: Container(
-        width: 140,
+        width: 160,
         margin: const EdgeInsets.only(right: 16.0),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12.0), // Rounded corners
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black26, // Shadow color
-              blurRadius: 4.0, // Shadow blur radius
-              offset: Offset(1, 1), // Shadow offset
-            ),
-          ],
+          borderRadius: BorderRadius.circular(8.0),
+          border: Border.all(
+            color: Colors.grey.shade300, // Outline color
+            width: 1.5, // Outline width
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -43,25 +40,24 @@ class DepartmentCard extends StatelessWidget {
             // Image section with rounded corners at the top
             ClipRRect(
               borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(12.0),
-                topRight: Radius.circular(12.0),
+                topLeft: Radius.circular(8.0),
+                topRight: Radius.circular(8.0),
               ),
               child: Image.network(
                 imageUrl,
-                height: 110,
+                height: 120,
                 width: double.infinity,
-                fit: BoxFit.cover,
+                fit: BoxFit.fill,
               ),
             ),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
               child: Text(
                 departmentName,
-                textAlign: TextAlign.center, // Center align the text
                 style: const TextStyle(
-                  fontSize: 14, // Keep or adjust the font size as needed
-                  color: Colors.black87, // Title color for better contrast
-                  fontWeight: FontWeight.bold, // Make the font bolder
+                  fontSize: 14,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),

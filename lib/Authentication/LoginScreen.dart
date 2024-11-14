@@ -76,10 +76,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ).show(context);
 
       // Navigate to home screen
-      Navigator.pushReplacement(
-        context,
+      Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => HomeScreen()),
+            (Route<dynamic> route) => false,
       );
+
     } catch (e) {
       // Catch Firebase Auth errors
       String errorMessage = 'Login failed. Please try again';

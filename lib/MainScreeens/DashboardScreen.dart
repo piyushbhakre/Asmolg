@@ -16,9 +16,12 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final CollectionReference _departmentCollection = FirebaseFirestore.instance.collection('notes');
-  final CollectionReference _carouselCollection = FirebaseFirestore.instance.collection('Carousel Ads');
-  final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore.instance.collection('aptitude');
+  final CollectionReference _departmentCollection = FirebaseFirestore.instance
+      .collection('notes');
+  final CollectionReference _carouselCollection = FirebaseFirestore.instance
+      .collection('Carousel Ads');
+  final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore
+      .instance.collection('aptitude');
 
   late List<AptitudeCard> aptitudeCourses = [];
   List<DepartmentCard> departmentCards = [];
@@ -41,7 +44,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final List<DepartmentCard> departments = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>?;
         final String? imageUrl = data?['bannerUrl'];
-        final String departmentName = data?['department'] ?? 'Unknown Department';
+        final String departmentName = data?['department'] ??
+            'Unknown Department';
 
         return DepartmentCard(
           imageUrl: imageUrl ?? 'https://via.placeholder.com/150',
@@ -87,10 +91,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const String defaultImagePath = 'assets/tp.png';
         final String title = data?['course_name'] ?? 'Unknown Course';
         final String price = data?['price']?.toString() ?? 'Free';
-        final String description = data?['description'] ?? 'No description available.';
+        final String description = data?['description'] ??
+            'No description available.';
 
         return AptitudeCard(
-          imageUrl: defaultImagePath,  // Always use asset image path
+          imageUrl: defaultImagePath, // Always use asset image path
           title: title,
           price: price,
           description: description,
@@ -105,7 +110,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       print("Error fetching aptitude courses: $e");
     }
   }
-
 
 
   @override
@@ -157,8 +161,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         return Builder(
                           builder: (BuildContext context) {
                             return Container(
-                              width: MediaQuery.of(context).size.width,
-                              margin: const EdgeInsets.symmetric(horizontal: 1.0),
+                              width: MediaQuery
+                                  .of(context)
+                                  .size
+                                  .width,
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 1.0),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15.0),
 
@@ -192,17 +200,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SeeAllPage(
-                            title: 'Engineering Departments',
-                            items: departmentCards,
-                          ),
+                          builder: (context) =>
+                              SeeAllPage(
+                                title: 'Engineering Departments',
+                                items: departmentCards,
+                              ),
                         ),
                       );
                     },
                   ),
-                  _buildHorizontalList(departmentCards),
+                  _buildHorizontalList(departmentCards, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SeeAllPage(
+                              title: 'Engineering Departments',
+                              items: departmentCards,
+                            ),
+                      ),
+                    );
+                  }),
 
-                  // Aptitude Courses Section
+// Aptitude Courses Section
                   _buildSectionHeader(
                     title: 'T & P',
                     icon: Icons.lightbulb,
@@ -210,15 +230,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => SeeAllPage(
-                            title: 'Aptitude Courses',
-                            items: aptitudeCourses,
-                          ),
+                          builder: (context) =>
+                              SeeAllPage(
+                                title: 'Aptitude Courses',
+                                items: aptitudeCourses,
+                              ),
                         ),
                       );
                     },
                   ),
-                  _buildHorizontalList(aptitudeCourses),
+                  _buildHorizontalList(aptitudeCourses, () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            SeeAllPage(
+                              title: 'Aptitude Courses',
+                              items: aptitudeCourses,
+                            ),
+                      ),
+                    );
+                  }),
 
                   const SizedBox(height: 80),
                 ],
@@ -240,7 +272,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Padding _buildSectionHeader({required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
+  Padding _buildSectionHeader(
+      {required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Row(
@@ -272,18 +305,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Container _buildHorizontalList(List<dynamic> items) {
+  Container _buildHorizontalList(List<dynamic> items,
+      VoidCallback onSeeAllPressed) {
     return Container(
       height: 200,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        itemCount: items.length,
+        itemCount: items.length > 5 ? 6 : items.length,
+        // Show only 5 items + "See All" button if more than 5 items
         itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: items[index] as Widget,
-          );
+          if (index == 5) {
+            // Display "See All" button after 5 items
+            return GestureDetector(
+              onTap: onSeeAllPressed,
+              child: CircleAvatar(
+                backgroundColor: Colors.blueAccent,
+                radius: 30,
+                child: const Icon(Icons.arrow_forward, color: Colors.white),
+              ),
+            );
+          } else {
+            return Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: items[index] as Widget,
+            );
+          }
         },
       ),
     );

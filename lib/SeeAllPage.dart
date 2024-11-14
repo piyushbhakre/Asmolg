@@ -70,8 +70,8 @@ class _SeeAllPageState extends State<SeeAllPage> {
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2, // 2 items per row
                   crossAxisSpacing: 8.0, // Spacing between columns
-                  mainAxisSpacing: 8.0, // Spacing between rows
-                  childAspectRatio: 0.9, // Aspect ratio of each item (width/height)
+                  mainAxisSpacing: 12.0, // Spacing between rows
+                  childAspectRatio: 0.8, // Aspect ratio of each item (width/height)
                 ),
                 itemCount: filteredItems.length,
                 itemBuilder: (context, index) {

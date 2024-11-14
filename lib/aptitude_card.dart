@@ -210,7 +210,7 @@ class _AptitudeCardState extends State<AptitudeCard> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 10.0),
+              padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -222,7 +222,7 @@ class _AptitudeCardState extends State<AptitudeCard> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(height: 4),
+
                   Text(
                     _isSubscribed
                         ? 'Subscribed'
@@ -230,7 +230,7 @@ class _AptitudeCardState extends State<AptitudeCard> {
                         ? 'Free'
                         : 'Price: ₹ ${widget.price}',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 12,
                       color: _isSubscribed || widget.price == 'Free'
                           ? Colors.green
                           : Colors.blueGrey,

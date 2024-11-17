@@ -224,7 +224,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
 // Aptitude Courses Section
                   _buildSectionHeader(
-                    title: 'T & P',
+                    title: 'Placement Material',
                     icon: Icons.lightbulb,
                     onSeeAllPressed: () {
                       Navigator.push(
@@ -232,7 +232,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         MaterialPageRoute(
                           builder: (context) =>
                               SeeAllPage(
-                                title: 'Aptitude Courses',
+                                title: 'Placement Material',
                                 items: aptitudeCourses,
                               ),
                         ),

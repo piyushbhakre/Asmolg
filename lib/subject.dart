@@ -516,12 +516,10 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                           ],
                         ),
                         if (_offerTagline != null)
-                        // Tagline Badge
-                          if (_offerTagline != null)
-                            Positioned(
-                              top: 10,
-                              right: 10,
-                              child: Container(
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end, // Aligns to the right side
+                            children: [
+                              Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
                                   color: Colors.orange,
@@ -535,7 +533,7 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                                   ],
                                 ),
                                 child: Row(
-                                  mainAxisSize: MainAxisSize.min, // Shrink row to fit content
+                                  mainAxisSize: MainAxisSize.min, // Shrinks to fit content
                                   children: [
                                     const FaIcon(
                                       FontAwesomeIcons.tags, // Offer icon
@@ -554,7 +552,9 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                                   ],
                                 ),
                               ),
-                            ),
+                            ],
+                          ),
+
                       ],
                     ),
                   ] else ...[

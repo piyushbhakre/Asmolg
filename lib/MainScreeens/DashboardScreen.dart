@@ -245,7 +245,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       MaterialPageRoute(
                         builder: (context) =>
                             SeeAllPage(
-                              title: 'Aptitude Courses',
+                              title: 'Placement Material',
                               items: aptitudeCourses,
                             ),
                       ),

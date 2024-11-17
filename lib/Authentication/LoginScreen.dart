@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:asmolg/Authentication/RegisterPage.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -48,7 +49,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // Validate email and password fields
     setState(() {
       _emailError = _emailController.text.isEmpty ? "Please fill in the email" : null;
       _passwordError = _passwordController.text.isEmpty ? "Please fill in the password" : null;
@@ -61,34 +61,51 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Sign in with Email and password
-      await _auth.signInWithEmailAndPassword(
+      // Attempt login
+      final userCredential = await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Show CherryToast after successful login
+      final user = userCredential.user;
+      if (user == null) {
+        throw FirebaseAuthException(code: 'user-not-found', message: 'User not found.');
+      }
+
+      final userDocRef = FirebaseFirestore.instance.collection('users').doc(user.email);
+
+      // Check if a session exists
+      final userDoc = await userDocRef.get();
+      if (userDoc.exists && userDoc.data()?['session'] != null) {
+        CherryToast.error(
+          title: Text("Login Error"),
+          description: Text("You are already logged in on another device."),
+          animationDuration: Duration(milliseconds: 500),
+        ).show(context);
+
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Update Firestore with the new session
+      await userDocRef.update({'session': DateTime.now().toIso8601String()});
+
       CherryToast.success(
         title: Text("Login Successful 🎉"),
         description: Text("Enjoy our services 😃"),
         animationDuration: Duration(milliseconds: 500),
       ).show(context);
 
-      // Navigate to home screen
+      // Navigate to the home screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => HomeScreen()),
             (Route<dynamic> route) => false,
       );
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = _handleFirebaseError(e.code);
 
-    } catch (e) {
-      // Catch Firebase Auth errors
-      String errorMessage = 'Login failed. Please try again';
-
-      if (e is FirebaseAuthException) {
-        errorMessage = _handleFirebaseError(e.code);
-      }
-
-      // Show CherryToast with user-friendly error message
       CherryToast.error(
         title: Text("Login Error"),
         description: Text(errorMessage),
@@ -100,6 +117,7 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+
 
   Future<void> _resetPassword(String email) async {
     try {

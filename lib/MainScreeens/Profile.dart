@@ -144,17 +144,18 @@ class _ProfileAppState extends State<ProfileApp> {
 
 
 
-
   Future<void> _signOut() async {
-    await FirebaseAuth.instance.signOut();
-    // After signing out, navigate to the login screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => LoginPage(), // Your LoginPage widget
-      ),
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance.collection('users').doc(user.email).update({'session': null});
+      await FirebaseAuth.instance.signOut();
+    }
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => LoginPage()),
+          (Route<dynamic> route) => false,
     );
   }
+
 
   // Method to show a sign-out confirmation dialog using QuickAlert
   void _showSignOutDialog(BuildContext context) {

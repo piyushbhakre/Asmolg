@@ -25,10 +25,21 @@ class _ProfileAppState extends State<ProfileApp> {
     super.initState();
     fetchUserDetails(); // Fetch the phone number and full name when the widget is initialized
   }
+// Helper function to strip the time from DateTime and compare just the date part
+  bool isExpired(DateTime purchaseDate, int expiryDays) {
+    DateTime now = DateTime.now();
+    DateTime today = DateTime(now.year, now.month, now.day);
+    DateTime expiryDate = purchaseDate.add(Duration(days: expiryDays));
+    DateTime expiryStartDate = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+
+    return expiryStartDate.isBefore(today) || expiryStartDate.isAtSameMomentAs(today);
+  }
+
 
   Future<void> fetchUserDetails() async {
     if (user != null) {
       try {
+        // Fetch user details (Phone and Full Name)
         final DocumentSnapshot doc = await FirebaseFirestore.instance
             .collection('users')
             .doc(user!.email)
@@ -56,7 +67,21 @@ class _ProfileAppState extends State<ProfileApp> {
         });
       }
 
-      // Fetch bought subjects or courses
+      // Fetch Expiry Days from "Expiry days" collection
+      int globalExpiryDays = 0;
+      try {
+        final expiryDoc = await FirebaseFirestore.instance
+            .collection('Expiry days')
+            .doc('Subject expiry')
+            .get();
+        if (expiryDoc.exists && expiryDoc.data() != null) {
+          globalExpiryDays = int.tryParse(expiryDoc.data()!['days'].toString()) ?? 0;
+        }
+      } catch (e) {
+        print("Error fetching global expiry days: $e");
+      }
+
+      // Fetch Bought Subjects or Courses for the User
       try {
         DocumentSnapshot userDoc = await FirebaseFirestore.instance
             .collection('users')
@@ -69,12 +94,29 @@ class _ProfileAppState extends State<ProfileApp> {
           // Process the bought subjects or courses
           setState(() {
             boughtCourses = subjects.map((item) {
+              DateTime purchaseDate = item['date'] is Timestamp
+                  ? (item['date'] as Timestamp).toDate()
+                  : DateTime.tryParse(item['date'].toString()) ?? DateTime.now();
+
+              // Use the global expiry days value to calculate expiry date
+              DateTime? expiryDate;
+              if (globalExpiryDays > 0) {
+                expiryDate = purchaseDate.add(Duration(days: globalExpiryDays));
+                // Adjusted expiry check
+                if (isExpired(purchaseDate, globalExpiryDays)) {
+                  _deleteExpiredSubject(item); // Make sure 'item' is the exact map from the array
+                }
+
+              }
+
               return {
                 "content": item['course_name'] ?? item['subject_name'] ?? 'Unknown Content',
                 "date": item['date'] ?? 'Unknown Date',
                 "department_name": item['department_name'] ?? 'Unknown Department',
-                "subject_id": item['subject_id'] ?? '', // Store the subject_id here
-                "isAptitude": item.containsKey('course_name'), // Determine if it's an aptitude
+                "subject_id": item['subject_id'] ?? '',
+                "expiry_date": expiryDate,
+                "expiry_days": globalExpiryDays,
+                "isAptitude": item.containsKey('course_name'),
               };
             }).toList();
           });
@@ -84,6 +126,24 @@ class _ProfileAppState extends State<ProfileApp> {
       }
     }
   }
+
+
+  Future<void> _deleteExpiredSubject(Map<String, dynamic> subject) async {
+    if (user != null && subject['subject_id'] != null) {
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(user!.email).update({
+          'bought_content': FieldValue.arrayRemove([subject])
+        });
+        print("Expired subject deleted: ${subject['subject_id']}");
+      } catch (e) {
+        print("Error deleting expired subject: $e");
+      }
+    }
+  }
+
+
+
+
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
@@ -288,15 +348,21 @@ class _ProfileAppState extends State<ProfileApp> {
                 itemBuilder: (context, index) {
                   final course = filteredCourses[index];
 
-                  // Format the purchase date
-                  String formattedDate;
+                  // Format the purchase and expiry dates
+                  String formattedPurchaseDate = 'Unknown Date';
+                  String formattedExpiryDate = 'Lifetime Subscription';
+
                   if (course['date'] is Timestamp) {
-                    formattedDate = DateFormat('dd-MM-yyyy').format((course['date'] as Timestamp).toDate());
+                    formattedPurchaseDate =
+                        DateFormat('dd-MM-yyyy').format((course['date'] as Timestamp).toDate());
                   } else if (course['date'] is String) {
                     DateTime parsedDate = DateTime.tryParse(course['date']) ?? DateTime.now();
-                    formattedDate = DateFormat('dd-MM-yyyy').format(parsedDate);
-                  } else {
-                    formattedDate = 'Unknown Date';
+                    formattedPurchaseDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+                  }
+
+                  if (course['expiry_days'] > 0 && course['expiry_date'] != null) {
+                    formattedExpiryDate =
+                        DateFormat('dd-MM-yyyy').format(course['expiry_date'] as DateTime);
                   }
 
                   return GestureDetector(
@@ -344,7 +410,26 @@ class _ProfileAppState extends State<ProfileApp> {
                           course['content'],
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Purchased on: $formattedDate'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 5), // Space between title and purchase date
+                            Text(
+                              'Purchased: $formattedPurchaseDate',
+                              style: const TextStyle(fontSize: 14, color: Colors.black),
+                            ),
+                            const SizedBox(height: 8), // Space between purchase and expiry date
+                            Text(
+                              'Expires: $formattedExpiryDate',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: formattedExpiryDate == 'Lifetime Subscription'
+                                    ? Colors.green
+                                    : Colors.red,
+                              ),
+                            ),
+                          ],
+                        ),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                       ),
                     ),
@@ -358,5 +443,6 @@ class _ProfileAppState extends State<ProfileApp> {
       },
     );
   }
+
 }
 

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 class FileViewerPage extends StatefulWidget {
@@ -12,6 +11,8 @@ class FileViewerPage extends StatefulWidget {
 }
 
 class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObserver {
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +49,12 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
         ),
         centerTitle: true,
       ),
-      body: SfPdfViewer.network(widget.fileUrl),
+      body: SfPdfViewer.network(
+        widget.fileUrl,
+        key: _pdfViewerKey,
+        enableTextSelection: false, // Disable text selection
+        canShowHyperlinkDialog: false, // Disable hyperlink dialogs
+      ),
     );
   }
 }

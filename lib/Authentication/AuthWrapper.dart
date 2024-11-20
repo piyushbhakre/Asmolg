@@ -1,4 +1,5 @@
 import 'package:asmolg/Authentication/LoginPage.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
@@ -13,6 +14,7 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance; // Use FirebaseAnalytics.instance
   bool _isUpdateRequired = false;
   bool _updateDialogShown = false;
 
@@ -21,7 +23,19 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
     _checkForUpdate();
     _handlePermissions();
-    _revokeNotificationPermissions(); // Call method to revoke notification permissions
+    _revokeNotificationPermissions();
+
+    // Log a custom event when AuthWrapper is loaded
+    _logPageViewEvent();
+  }
+
+  Future<void> _logPageViewEvent() async {
+    // Log a "page_view" event
+    await _analytics.logEvent(
+      name: "page_view",
+      parameters: {"page_name": "auth_wrapper"},
+    );
+    print("Firebase Analytics: Page view logged for AuthWrapper");
   }
 
   Future<void> _checkForUpdate() async {
@@ -37,6 +51,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _showUpdateDialog() async {
+    // Log an event for showing the update dialog
+    await _analytics.logEvent(
+      name: "update_dialog_shown",
+      parameters: {"update_required": _isUpdateRequired},
+    );
+
     setState(() => _updateDialogShown = true);
     showDialog(
       context: context,
@@ -101,6 +121,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
     InAppUpdateManager manager = InAppUpdateManager();
     AppUpdateInfo? updateInfo = await manager.checkForUpdate();
     if (updateInfo != null) {
+      // Log an event when update starts
+      await _analytics.logEvent(
+        name: "update_started",
+        parameters: {"update_type": "immediate"},
+      );
       await manager.startAnUpdate(type: AppUpdateType.immediate);
     }
   }
@@ -110,11 +135,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
     int permissionState = prefs.getInt('permissionState') ?? 0; // Get stored permission state, defaulting to 0
 
     if (permissionState == 0) {
-      // Request permissions if not granted
-      // Example: Requesting notification permissions
-      // Replace with actual permission handling code
-      // For example, you might request notification permissions using firebase_messaging or local_notifications package
-      // FirebaseMessaging.instance.requestPermission();
+      // Log event for permission request
+      await _analytics.logEvent(
+        name: "permission_request",
+        parameters: {"permission_type": "notification"},
+      );
 
       // Store permission state as granted (1) once permissions are granted
       await prefs.setInt('permissionState', 1);
@@ -124,6 +149,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
   Future<void> _revokeNotificationPermissions() async {
     try {
       await FirebaseMessaging.instance.deleteToken(); // Revoke notification token
+      // Log event for notification token revocation
+      await _analytics.logEvent(
+        name: "notification_permission_revoked",
+      );
       print('Notification permissions revoked successfully.');
     } catch (e) {
       print('Failed to revoke notification permissions: $e');

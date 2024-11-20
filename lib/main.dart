@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:connectivity_wrapper/connectivity_wrapper.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase if it hasn’t been already
@@ -59,7 +60,7 @@ Future<void> main() async {
 
   OneSignal.Notifications.requestPermission(true);
 
-
+  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
 
   runApp(const MyApp());
 }

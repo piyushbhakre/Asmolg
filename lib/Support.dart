@@ -10,15 +10,17 @@ class SupportPage extends StatefulWidget {
 class _SupportPageState extends State<SupportPage> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _EmailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _numberController = TextEditingController();
   bool _isSubmitting = false;
 
   @override
   void dispose() {
     _nameController.dispose();
-    _EmailController.dispose();
+    _emailController.dispose();
     _messageController.dispose();
+    _numberController.dispose();
     super.dispose();
   }
 
@@ -31,8 +33,9 @@ class _SupportPageState extends State<SupportPage> {
       try {
         await FirebaseFirestore.instance.collection('Grievances').add({
           'name': _nameController.text,
-          'Email': _EmailController.text,
+          'email': _emailController.text,
           'message': _messageController.text,
+          'number': _numberController.text,
           'date': DateTime.now().toIso8601String(),
         });
 
@@ -41,8 +44,9 @@ class _SupportPageState extends State<SupportPage> {
         );
 
         _nameController.clear();
-        _EmailController.clear();
+        _emailController.clear();
         _messageController.clear();
+        _numberController.clear();
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error submitting grievance: $e')),
@@ -99,9 +103,22 @@ class _SupportPageState extends State<SupportPage> {
                 children: [
                   _buildTextField(_nameController, 'Your Name'),
                   SizedBox(height: 16),
-                  _buildTextField(_EmailController, 'Your Email'),
+                  _buildTextField(_emailController, 'Your Email'),
                   SizedBox(height: 16),
-                  _buildTextField(_messageController, 'Your Grievance', maxLines: 5),
+                  _buildTextField(
+                      _numberController, 'Your Number',
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your number';
+                        } else if (!RegExp(r'^\d{10}$').hasMatch(value)) {
+                          return 'Please enter a valid 10-digit number';
+                        }
+                        return null;
+                      }),
+                  SizedBox(height: 16),
+                  _buildTextField(
+                      _messageController, 'Your Grievance', maxLines: 5),
                   SizedBox(height: 24),
                   _isSubmitting
                       ? Center(child: CircularProgressIndicator())
@@ -125,8 +142,6 @@ class _SupportPageState extends State<SupportPage> {
                     ),
                   ),
                   SizedBox(height: 40),
-
-                  // Updated option list without cards
                   _buildOptionTile(
                     'Privacy Policy',
                     'https://www.asmolg.co.in/legals',
@@ -152,11 +167,8 @@ class _SupportPageState extends State<SupportPage> {
                     Colors.orange,
                   ),
                   SizedBox(height: 40),
-
                 ],
-
               ),
-
             ),
           ],
         ),
@@ -164,11 +176,12 @@ class _SupportPageState extends State<SupportPage> {
     );
   }
 
-  // Reusable Text Field
-  Widget _buildTextField(TextEditingController controller, String label, {int maxLines = 1}) {
+  Widget _buildTextField(TextEditingController controller, String label,
+      {int maxLines = 1, TextInputType keyboardType = TextInputType.text, String? Function(String?)? validator}) {
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
+      keyboardType: keyboardType,
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(color: Colors.black87),
@@ -180,16 +193,16 @@ class _SupportPageState extends State<SupportPage> {
         ),
         contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return 'Please enter your $label.toLowerCase()';
-        }
-        return null;
-      },
+      validator: validator ??
+              (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please enter your $label.toLowerCase()';
+            }
+            return null;
+          },
     );
   }
 
-  // Updated Option Tile for a Modern Look
   Widget _buildOptionTile(String title, String url, IconData icon, Color iconColor) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),

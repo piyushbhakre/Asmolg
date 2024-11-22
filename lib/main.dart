@@ -8,7 +8,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_wrapper/connectivity_wrapper.dart';
-import 'package:once/once.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
@@ -65,7 +64,7 @@ Future<void> main() async {
   };
   await _storeFcmToken();
   // Run tasks every 12 hours
-  await Once.runEvery12Hours(deleteExpiredSubjectsTask, callback: deleteExpiredSubjects);
+  await deleteExpiredSubjects();
 
   runApp(const MyApp());
 }

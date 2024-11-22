@@ -10,7 +10,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_wrapper/connectivity_wrapper.dart';
 import 'package:once/once.dart';
 import 'package:flutter/material.dart';
-import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 const String deleteExpiredSubjectsTask = "deleteExpiredSubjects";
@@ -56,12 +55,6 @@ Future<void> main() async {
   // Set up Firebase Messaging and handle messages
   await setupFirebaseMessaging();
 
-  OneSignal.Debug.setLogLevel(OSLogLevel.verbose);
-
-  OneSignal.initialize("cd32a0b0-2476-4529-9a20-965b26b5eb5e");
-
-  OneSignal.Notifications.requestPermission(true);
-
   FlutterError.onError = (errorDetails) {
     FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
   };
@@ -70,10 +63,9 @@ Future<void> main() async {
     FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
     return true;
   };
-
+  await _storeFcmToken();
   // Run tasks every 12 hours
   await Once.runEvery12Hours(deleteExpiredSubjectsTask, callback: deleteExpiredSubjects);
-  await Once.runEvery12Hours("storeFcmTokenDaily", callback: _storeFcmToken);
 
   runApp(const MyApp());
 }
@@ -187,7 +179,7 @@ Future<void> setupFirebaseMessaging() async {
   }
 }
 
-// Store FCM token, device name, and IP address in Firestore
+// Store FCM token, device name in Firestore
 Future<void> _storeFcmToken() async {
   try {
     // Get the FCM token
@@ -208,39 +200,37 @@ Future<void> _storeFcmToken() async {
       deviceName = iosInfo.utsname.machine ?? "iOS Device";
     }
 
-    // Get the IP address
-    String ipAddress = await _getIPAddress();
+    // Reference to the document in the fcmtoken collection
+    DocumentReference docRef = FirebaseFirestore.instance.collection('fcmtoken').doc(deviceName);
 
-    // Combine device name and IP address to create a unique document name
-    String documentName = "$deviceName-$ipAddress";
+    // Check if the document exists
+    DocumentSnapshot docSnapshot = await docRef.get();
 
-    // Store the FCM token in Firestore
-    await FirebaseFirestore.instance
-        .collection('fcmtoken')
-        .doc(documentName)
-        .set({'token': fcmToken});
+    if (docSnapshot.exists) {
+      // Document exists, check the token
+      final data = docSnapshot.data() as Map<String, dynamic>?; // Cast to Map<String, dynamic>
+      String? existingToken = data?['token']; // Safely access 'token'
 
-    print("FCM token stored successfully for $documentName.");
+      if (existingToken == fcmToken) {
+        print("FCM token already matches the stored token for $deviceName. No update needed.");
+        return;
+      } else {
+        // Update the token if it is different or missing
+        print("Updating FCM token for $deviceName.");
+        await docRef.update({'token': fcmToken});
+      }
+    } else {
+      // Document does not exist, create a new one
+      print("No document found for $deviceName. Creating a new document.");
+      await docRef.set({'token': fcmToken});
+    }
+
+    print("FCM token stored successfully for $deviceName.");
   } catch (e) {
     print("Error storing FCM token: $e");
   }
 }
 
-// Get the device's IP address
-Future<String> _getIPAddress() async {
-  try {
-    for (var interface in await NetworkInterface.list()) {
-      for (var addr in interface.addresses) {
-        if (addr.type == InternetAddressType.IPv4) {
-          return addr.address;
-        }
-      }
-    }
-  } catch (e) {
-    print("Error fetching IP address: $e");
-  }
-  return "UnknownIP";
-}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

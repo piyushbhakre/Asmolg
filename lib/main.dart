@@ -1,19 +1,19 @@
+import 'dart:io';
 import 'dart:ui';
-
 import 'package:asmolg/Authentication/AuthWrapper.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:connectivity_wrapper/connectivity_wrapper.dart';
+import 'package:once/once.dart';
+import 'package:flutter/material.dart';
 import 'package:onesignal_flutter/onesignal_flutter.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Initialize Firebase if it hasn’t been already
-  await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
-}
+const String deleteExpiredSubjectsTask = "deleteExpiredSubjects";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -71,26 +71,74 @@ Future<void> main() async {
     return true;
   };
 
+  // Run tasks every 12 hours
+  await Once.runEvery12Hours(deleteExpiredSubjectsTask, callback: deleteExpiredSubjects);
+  await Once.runEvery12Hours("storeFcmTokenDaily", callback: _storeFcmToken);
+
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase if it hasn’t been already
+  await Firebase.initializeApp();
+  print("Handling a background message: ${message.messageId}");
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return ConnectivityAppWrapper(
-      app: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: ConnectivityWidgetWrapper(
-          child: AuthWrapper(),
-          disableInteraction: true,
-          height: 80,
-          message: "No internet connection! Please reconnect.",
-        ),
-      ),
-    );
+// Daily task: Delete expired subjects
+Future<void> deleteExpiredSubjects() async {
+  try {
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      // Fetch expiry days
+      int globalExpiryDays = 0;
+      final expiryDoc = await FirebaseFirestore.instance
+          .collection('Expiry days')
+          .doc('Subject expiry')
+          .get();
+      if (expiryDoc.exists && expiryDoc.data() != null) {
+        globalExpiryDays = int.tryParse(expiryDoc.data()!['days'].toString()) ?? 0;
+      }
+
+      // Fetch user's bought content
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.email)
+          .get();
+      if (userDoc.exists && userDoc.data() != null) {
+        final boughtContent = userDoc.data() as Map<String, dynamic>;
+        List<dynamic> subjects = boughtContent['bought_content'] ?? [];
+
+        for (var item in subjects) {
+          DateTime purchaseDate = item['date'] is Timestamp
+              ? (item['date'] as Timestamp).toDate()
+              : DateTime.tryParse(item['date'].toString()) ?? DateTime.now();
+
+          if (globalExpiryDays > 0) {
+            bool expired = isExpired(purchaseDate, globalExpiryDays);
+            if (expired) {
+              // Delete expired subject
+              await FirebaseFirestore.instance.collection('users').doc(user.email).update({
+                'bought_content': FieldValue.arrayRemove([item])
+              });
+              print("Deleted expired subject: ${item['subject_id']}");
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    print("Error in deleting expired subjects: $e");
   }
+}
+
+// Helper function to check if a subject is expired
+bool isExpired(DateTime purchaseDate, int expiryDays) {
+  DateTime now = DateTime.now();
+  DateTime today = DateTime(now.year, now.month, now.day);
+  DateTime expiryDate = purchaseDate.add(Duration(days: expiryDays));
+  DateTime expiryStartDate = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
+
+  return expiryStartDate.isBefore(today) || expiryStartDate.isAtSameMomentAs(today);
 }
 
 Future<void> setupFirebaseMessaging() async {
@@ -125,7 +173,6 @@ Future<void> setupFirebaseMessaging() async {
     );
   });
 
-
   // Handle when the user taps on the notification and opens the app
   FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
     print('Notification clicked: ${message.notification?.title}');
@@ -137,5 +184,79 @@ Future<void> setupFirebaseMessaging() async {
   if (initialMessage != null) {
     print('App opened from notification: ${initialMessage.notification?.title}');
     // Navigate to a specific screen if needed
+  }
+}
+
+// Store FCM token, device name, and IP address in Firestore
+Future<void> _storeFcmToken() async {
+  try {
+    // Get the FCM token
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken == null) {
+      print("Unable to fetch FCM token.");
+      return;
+    }
+
+    // Get the device name
+    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
+    String deviceName = "Unknown Device";
+    if (Platform.isAndroid) {
+      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
+      deviceName = androidInfo.model ?? "Android Device";
+    } else if (Platform.isIOS) {
+      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
+      deviceName = iosInfo.utsname.machine ?? "iOS Device";
+    }
+
+    // Get the IP address
+    String ipAddress = await _getIPAddress();
+
+    // Combine device name and IP address to create a unique document name
+    String documentName = "$deviceName-$ipAddress";
+
+    // Store the FCM token in Firestore
+    await FirebaseFirestore.instance
+        .collection('fcmtoken')
+        .doc(documentName)
+        .set({'token': fcmToken});
+
+    print("FCM token stored successfully for $documentName.");
+  } catch (e) {
+    print("Error storing FCM token: $e");
+  }
+}
+
+// Get the device's IP address
+Future<String> _getIPAddress() async {
+  try {
+    for (var interface in await NetworkInterface.list()) {
+      for (var addr in interface.addresses) {
+        if (addr.type == InternetAddressType.IPv4) {
+          return addr.address;
+        }
+      }
+    }
+  } catch (e) {
+    print("Error fetching IP address: $e");
+  }
+  return "UnknownIP";
+}
+
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ConnectivityAppWrapper(
+      app: MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: ConnectivityWidgetWrapper(
+          child: AuthWrapper(),
+          disableInteraction: true,
+          height: 80,
+          message: "No internet connection! Please reconnect.",
+        ),
+      ),
+    );
   }
 }

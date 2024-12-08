@@ -40,7 +40,7 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('${widget.aptitudeName}'),
+        title: Text('${widget.aptitudeName} Topics'),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),
@@ -120,7 +120,13 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
                       return const Center(child: Text('No topics match your search.'));
                     }
 
-                    return ListView.builder(
+                    return GridView.builder(
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 5, // 5 cards per row
+                        crossAxisSpacing: 16, // Space between cards horizontally
+                        mainAxisSpacing: 16, // Space between cards vertically
+                        childAspectRatio: 0.75, // Adjust aspect ratio for card sizing
+                      ),
                       itemCount: topics.length,
                       itemBuilder: (context, index) {
                         final topic = topics[index];

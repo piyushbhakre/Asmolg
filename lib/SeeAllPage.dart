@@ -79,6 +79,7 @@ class _SeeAllPageState extends State<SeeAllPage> {
                 },
               ),
             ),
+            const SizedBox(height: 20.0), // Add some spacing
           ],
         ),
       ),

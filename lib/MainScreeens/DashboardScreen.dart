@@ -7,6 +7,8 @@ import 'package:screen_protector/screen_protector.dart';
 import '../SeeAllPage.dart';
 import '../aptitude_card.dart';
 import '../department_card.dart';
+import 'CartPage.dart';
+import 'contentPreview.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({Key? key}) : super(key: key);
@@ -33,9 +35,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     ScreenProtector.preventScreenshotOn();
-    fetchDepartments();
-    fetchAptitudeCourses();
-    fetchCarouselAds();
+    _fetchAllData();
+  }
+
+  Future<void> _fetchAllData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    await Future.wait([
+      fetchDepartments(),
+      fetchAptitudeCourses(),
+      fetchCarouselAds(),
+    ]);
+    setState(() {
+      _isLoading = false;
+    });
   }
 
   Future<void> fetchDepartments() async {
@@ -44,8 +58,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       final List<DepartmentCard> departments = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>?;
         final String? imageUrl = data?['bannerUrl'];
-        final String departmentName = data?['department'] ??
-            'Unknown Department';
+        final String departmentName =
+            data?['department'] ?? 'Unknown Department';
 
         return DepartmentCard(
           imageUrl: imageUrl ?? 'https://via.placeholder.com/150',
@@ -55,13 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         departmentCards = departments;
-        _isLoading = false;
       });
     } catch (e) {
       print("Error fetching departments: $e");
-      setState(() {
-        _isLoading = false;
-      });
     }
   }
 
@@ -91,8 +101,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const String defaultImagePath = 'assets/tp.png';
         final String title = data?['course_name'] ?? 'Unknown Course';
         final String price = data?['price']?.toString() ?? 'Free';
-        final String description = data?['description'] ??
-            'No description available.';
+        final String description =
+            data?['description'] ?? 'No description available.';
 
         return AptitudeCard(
           imageUrl: defaultImagePath, // Always use asset image path
@@ -104,13 +114,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       setState(() {
         aptitudeCourses = courses;
-        _isLoading = false;
       });
     } catch (e) {
       print("Error fetching aptitude courses: $e");
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -129,131 +137,163 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: CircleAvatar(
-                  backgroundImage: AssetImage('assets/logo.png'),
-                  radius: 20,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CartPage()),
+                  );
+                },
+                child: Stack(
+                  children: [
+                    // Cart Icon with slight padding to adjust its position
+                    Padding(
+                      padding: const EdgeInsets.only(right: 16.0), // Move the cart icon slightly to the left
+                      child: const Icon(Icons.shopping_cart, color: Colors.black),
+                    ),
+                    // Cart Badge at the top-right corner of the cart icon
+                    Positioned(
+                      right: 0,
+                      bottom: 8,
+                      child: ValueListenableBuilder<int>(
+                        valueListenable: cartNotifier,
+                        builder: (context, cartCount, child) {
+                          return cartCount > 0
+                              ? Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.red,
+                            ),
+                            child: Text(
+                              '$cartCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                              : const SizedBox.shrink(); // No badge when cartCount is 0
+                        },
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+
           body: GestureDetector(
             onTap: () {
               FocusScope.of(context).unfocus();
             },
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Carousel Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: CarouselSlider(
-                      options: CarouselOptions(
-                        height: 200.0,
-                        autoPlay: true,
-                        enlargeCenterPage: true,
-                        enableInfiniteScroll: true,
-                        autoPlayInterval: const Duration(seconds: 3),
-                      ),
-                      items: carouselImages.map((imageUrl) {
-                        return Builder(
-                          builder: (BuildContext context) {
-                            return Container(
-                              width: MediaQuery
-                                  .of(context)
-                                  .size
-                                  .width,
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 1.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15.0),
-
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15.0),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.cover,
-                                    ),
-
-
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-
-                  // Departments Section
-                  _buildSectionHeader(
-                    title: 'Engineering',
-                    icon: Icons.school,
-                    onSeeAllPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SeeAllPage(
-                                title: 'Engineering Departments',
-                                items: departmentCards,
-                              ),
+            child: RefreshIndicator(
+              onRefresh: _fetchAllData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Carousel Section
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16.0),
+                      child: CarouselSlider(
+                        options: CarouselOptions(
+                          height: 200.0,
+                          autoPlay: true,
+                          enlargeCenterPage: true,
+                          enableInfiniteScroll: true,
+                          autoPlayInterval: const Duration(seconds: 3),
                         ),
-                      );
-                    },
-                  ),
-                  _buildHorizontalList(departmentCards, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SeeAllPage(
+                        items: carouselImages.map((imageUrl) {
+                          return Builder(
+                            builder: (BuildContext context) {
+                              return Container(
+                                width: MediaQuery.of(context).size.width,
+                                margin:
+                                const EdgeInsets.symmetric(horizontal: 1.0),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(15.0),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  child: Stack(
+                                    fit: StackFit.expand,
+                                    children: [
+                                      Image.network(
+                                        imageUrl,
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ),
+
+                    // Departments Section
+                    _buildSectionHeader(
+                      title: 'Engineering',
+                      icon: Icons.school,
+                      onSeeAllPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SeeAllPage(
                               title: 'Engineering Departments',
                               items: departmentCards,
                             ),
-                      ),
-                    );
-                  }),
-
-// Aptitude Courses Section
-                  _buildSectionHeader(
-                    title: 'Placement Material',
-                    icon: Icons.lightbulb,
-                    onSeeAllPressed: () {
+                          ),
+                        );
+                      },
+                    ),
+                    _buildHorizontalList(departmentCards, () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) =>
-                              SeeAllPage(
-                                title: 'Placement Material',
-                                items: aptitudeCourses,
-                              ),
+                          builder: (context) => SeeAllPage(
+                            title: 'Engineering Departments',
+                            items: departmentCards,
+                          ),
                         ),
                       );
-                    },
-                  ),
-                  _buildHorizontalList(aptitudeCourses, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SeeAllPage(
-                              title: 'Aptitude Courses',
+                    }),
+
+                    // Aptitude Courses Section
+                    _buildSectionHeader(
+                      title: 'Placement Material',
+                      icon: Icons.lightbulb,
+                      onSeeAllPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SeeAllPage(
+                              title: 'Placement Material',
                               items: aptitudeCourses,
                             ),
-                      ),
-                    );
-                  }),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildHorizontalList(aptitudeCourses, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => SeeAllPage(
+                            title: 'Aptitude Courses',
+                            items: aptitudeCourses,
+                          ),
+                        ),
+                      );
+                    }),
 
-                  const SizedBox(height: 80),
-                ],
+                    const SizedBox(height: 80),
+                  ],
+                ),
               ),
             ),
           ),
@@ -272,8 +312,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Padding _buildSectionHeader(
-      {required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
+  Padding _buildSectionHeader({
+    required String title,
+    required IconData icon,
+    required VoidCallback onSeeAllPressed,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       child: Row(

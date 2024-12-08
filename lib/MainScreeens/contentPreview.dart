@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/fileViewer.dart';
@@ -9,7 +11,63 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
+import 'CartPage.dart';
+
+
+class CartNotifier extends ValueNotifier<int> {
+  CartNotifier() : super(0) {
+    _loadCartFromStorage();
+  }
+
+  final Set<Map<String, String>> _cartItems = HashSet();
+
+  Future<void> _loadCartFromStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final storedCart = prefs.getString('cartItems');
+    if (storedCart != null) {
+      final List<dynamic> decodedCart = jsonDecode(storedCart);
+      for (var item in decodedCart) {
+        _cartItems.add(Map<String, String>.from(item));
+      }
+      value = _cartItems.length; // Update the cart count
+    }
+  }
+
+  Future<void> _saveCartToStorage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final List<Map<String, String>> cartList = _cartItems.toList();
+    prefs.setString('cartItems', jsonEncode(cartList));
+  }
+
+  void addItem(String subjectName, String departmentName, String price) async {
+    if (_cartItems.add({
+      'subjectName': subjectName,
+      'departmentName': departmentName,
+      'price': price,
+    })) {
+      value = _cartItems.length;
+      await _saveCartToStorage();
+    }
+  }
+
+  bool isAdded(String subjectName) {
+    return _cartItems.any((item) => item['subjectName'] == subjectName);
+  }
+
+  void removeItem(String subjectName) async {
+    _cartItems.removeWhere((item) => item['subjectName'] == subjectName);
+    value = _cartItems.length;
+    await _saveCartToStorage();
+  }
+
+  Set<Map<String, String>> get cartItems => _cartItems;
+}
+
+final cartNotifier = CartNotifier();
+
 
 class ContentPreviewPage extends StatefulWidget {
   final String departmentName;
@@ -115,11 +173,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => NotesPage(
-            departmentDocId: widget.departmentName,
-            subjectDocId: widget.subjectId,
-            subjectName: widget.subjectName,
-          ),
+          builder: (context) =>
+              NotesPage(
+                departmentDocId: widget.departmentName,
+                subjectDocId: widget.subjectId,
+                subjectName: widget.subjectName,
+              ),
         ),
       );
       return;
@@ -209,10 +268,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
           'date': DateTime.now().toIso8601String(),
           'mobile_no': mobileNo,
           'payment_id': response.paymentId,
-        }]),
+        }
+        ]),
       }, SetOptions(merge: true));
 
-      await FirebaseFirestore.instance.collection('Subscriptions').doc(userEmail).set({
+      await FirebaseFirestore.instance.collection('Subscriptions').doc(
+          userEmail).set({
         'bought_content': FieldValue.arrayUnion([{
           'subject_name': widget.subjectName,
           'subject_id': widget.subjectId,
@@ -221,7 +282,8 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
           'date': DateTime.now().toIso8601String(),
           'mobile_no': mobileNo,
           'payment_id': response.paymentId,
-        }]),
+        }
+        ]),
       }, SetOptions(merge: true));
 
       AwesomeNotifications().createNotification(
@@ -229,7 +291,8 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
           id: 1,
           channelKey: "basic channel",
           title: "Purchase Successful",
-          body: "You have successfully purchased the ${widget.subjectName} subject!",
+          body: "You have successfully purchased the ${widget
+              .subjectName} subject!",
           notificationLayout: NotificationLayout.Default,
         ),
       );
@@ -237,7 +300,8 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       CherryToast.success(
         title: const Text('Success'),
         displayIcon: true,
-        description: const Text('Payment Successful! You now have access to topics.'),
+        description: const Text(
+            'Payment Successful! You now have access to topics.'),
         animationDuration: const Duration(milliseconds: 500),
       ).show(context);
 
@@ -248,11 +312,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => NotesPage(
-            departmentDocId: widget.departmentName,
-            subjectDocId: widget.subjectId,
-            subjectName: widget.subjectName,
-          ),
+          builder: (context) =>
+              NotesPage(
+                departmentDocId: widget.departmentName,
+                subjectDocId: widget.subjectId,
+                subjectName: widget.subjectName,
+              ),
         ),
       );
     }
@@ -280,7 +345,8 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   }
 
   Future<String> _getUserMobileNumber(String email) async {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection('users').doc(email).get();
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection(
+        'users').doc(email).get();
     return userDoc['MobileNumber'] ?? '0000000000';
   }
 
@@ -294,12 +360,63 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
             backgroundColor: Colors.white,
             elevation: 0,
             centerTitle: true,
-            title: Text(
-              widget.departmentName,
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+            title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    widget.departmentName,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      overflow: TextOverflow.ellipsis,
+                      fontSize: 18
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CartPage()),
+                    );
+                  },
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      const Icon(Icons.shopping_cart, color: Colors.black),
+                      ValueListenableBuilder<int>(
+                        valueListenable: cartNotifier,
+                        builder: (context, cartCount, child) {
+                          return cartCount > 0
+                              ? Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.red,
+                            ),
+                            child: Text(
+                              '$cartCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                              : const SizedBox.shrink();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
             iconTheme: const IconThemeData(color: Colors.black),
           ),
+
           body: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -329,26 +446,74 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                 ),
                 const SizedBox(height: 20),
                 Center(
-                  child: SizedBox(
-                    width: 360,
-                    child: ElevatedButton(
-                      onPressed: _openCheckout,
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 170,
+                        child: ElevatedButton(
+                          onPressed: _openCheckout,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.blue,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Text(
+                            'Buy for ₹ ${widget.price}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                            ),
+                          ),
                         ),
                       ),
-                      child: Text(
-                        'Buy for ₹ ${widget.price}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                        ),
-                      ),
+                      const SizedBox(width: 10),
+                  SizedBox(
+                    width: 170,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: cartNotifier,
+                      builder: (context, cartCount, child) {
+                        final isAdded = cartNotifier.isAdded(widget.subjectName);
+                        return ElevatedButton(
+                          onPressed: () {
+                            if (!isAdded) {
+                              cartNotifier.addItem(
+                                widget.subjectName,
+                                widget.departmentName,
+                                widget.price,
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: isAdded ? Colors.green : Colors.orange,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.shopping_cart, color: Colors.white),
+                              const SizedBox(width: 8),
+                              Text(
+                                isAdded ? 'Added' : 'Add to Cart',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                  )],
+
+
+                ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
@@ -409,12 +574,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                       color: Colors.white,
                       size: 50,
                     ),
-                    SizedBox(height: 20),
-                    Text(
+                    const SizedBox(height: 20),
+                    const Text(
                       "Loading, please wait 🕒. \nThis may take more than a minute ⏳.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: Colors.yellow,
+                        color: Colors.black,
                         fontSize: 12,
                       ),
                     ),
@@ -423,7 +588,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
               ),
             ),
           ),
-
       ],
     );
   }

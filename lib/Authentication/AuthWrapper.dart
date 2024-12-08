@@ -1,4 +1,4 @@
-import 'package:asmolg/Authentication/LoginPage.dart';
+import 'package:asmolg/Authentication/LoginScreen.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -146,7 +146,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.connectionState == ConnectionState.active) {
           User? user = snapshot.data;
           if (user == null) {
-            return LoginPage();
+            return LoginScreen();
           } else {
             return HomeScreen();
           }

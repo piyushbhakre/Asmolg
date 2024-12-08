@@ -1,4 +1,4 @@
-import 'package:asmolg/Authentication/LoginPage.dart';
+import 'package:asmolg/Authentication/LoginScreen.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +7,6 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:quickalert/quickalert.dart'; // Import QuickAlert
 import 'package:intl/intl.dart'; // Import intl for date formatting
 import '../AptitudeTopicPage.dart';
-import '../Aptitudetopicpage.dart';
 
 class ProfileApp extends StatefulWidget {
   @override
@@ -72,7 +71,7 @@ class _ProfileAppState extends State<ProfileApp> {
       int globalExpiryDays = 0;
       try {
         final expiryDoc = await FirebaseFirestore.instance
-            .collection('Expiry days')
+            .collection('Miscellaneous')
             .doc('Subject expiry')
             .get();
         if (expiryDoc.exists && expiryDoc.data() != null) {
@@ -152,7 +151,7 @@ class _ProfileAppState extends State<ProfileApp> {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(
-        builder: (context) => LoginPage(), // Your LoginPage widget
+        builder: (context) => LoginScreen(), // Your LoginPage widget
       ),
     );
   }

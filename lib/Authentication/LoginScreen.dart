@@ -21,7 +21,6 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _emailError;
   String? _passwordError;
 
-  // Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   @override
@@ -32,7 +31,6 @@ class _LoginScreenState extends State<LoginScreen> {
       statusBarColor: Colors.transparent,
     ));
   }
-
   // Map Firebase error codes to user-friendly messages
   String _handleFirebaseError(String errorCode) {
     switch (errorCode) {
@@ -225,7 +223,7 @@ class _LoginScreenState extends State<LoginScreen> {
   // Method to navigate to the registration page
   void _navigateToRegister() {
     Navigator.of(context).push(PageRouteBuilder(
-      pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(),
+      pageBuilder: (context, animation, secondaryAnimation) => RegisterPage(email: '', phone: '',),
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
         const offset = Offset(-1.0, 0.0); // Slide transition from left to right
         var tween = Tween<Offset>(begin: offset, end: Offset.zero);
@@ -240,8 +238,8 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-        extendBodyBehindAppBar: true,
-        appBar: AppBar(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(
@@ -406,8 +404,8 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Container(
                 color: Colors.black.withOpacity(0.5),
                 child: Center(
-                  child: LoadingAnimationWidget.halfTriangleDot(
-                    color: Colors.black,
+                  child: LoadingAnimationWidget.staggeredDotsWave(
+                    color: Colors.white,
                     size: 50,
                   ),
                 ),

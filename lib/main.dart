@@ -1,6 +1,6 @@
 import 'dart:io';
 import 'dart:ui';
-import 'package:asmolg/Authentication/AuthWrapper.dart';
+import 'package:asmolg/Authentication/SplashScreen.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -193,10 +193,10 @@ Future<void> _storeFcmToken() async {
     String deviceName = "Unknown Device";
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      deviceName = androidInfo.model ?? "Android Device";
+      deviceName = androidInfo.model;
     } else if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      deviceName = iosInfo.utsname.machine ?? "iOS Device";
+      deviceName = iosInfo.utsname.machine;
     }
 
     // Reference to the document in the fcmtoken collection
@@ -239,12 +239,7 @@ class MyApp extends StatelessWidget {
     return ConnectivityAppWrapper(
       app: MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: ConnectivityWidgetWrapper(
-          child: AuthWrapper(),
-          disableInteraction: true,
-          height: 80,
-          message: "No internet connection! Please reconnect.",
-        ),
+        home: SplashScreen(),
       ),
     );
   }

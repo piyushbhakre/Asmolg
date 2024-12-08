@@ -4,8 +4,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'Aptitudetopicpage.dart';
-
 class AptitudeCard extends StatefulWidget {
   final String imageUrl;
   final String title;

@@ -88,6 +88,11 @@ class ContentPreviewPage extends StatefulWidget {
 }
 
 class _ContentPreviewPageState extends State<ContentPreviewPage> {
+  final User? user = FirebaseAuth.instance.currentUser; // Fetch current logged-in user
+  String phone = ''; // Placeholder for phone number
+
+
+
   late Razorpay _razorpay;
   bool _isSubscribed = false;
   bool _isLoading = false; // Track loading state
@@ -205,12 +210,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     var options = {
       'key': 'rzp_live_ibSut8YutP655P',
       'amount': (double.parse(widget.price) * 100).toInt().toString(),
-      'name': widget.subjectName,
+      'notes': '${widget.subjectName}',
       'description': 'Purchase for ${widget.subjectName}',
       'order_id': orderId,
       'prefill': {
-        'contact': '',
-        'email': '',
+        'contact': phone,
+        'email': user!.email,
       },
       'theme': {'color': '#F37254'},
     };
@@ -228,18 +233,25 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   Future<String> _fetchOrderId() async {
     try {
       final response = await http.post(
-        Uri.parse(CREATE_ORDER_ID),
+        Uri.parse(BASE_URL+CREATE_ORDER_ID),
         headers: <String, String>{
           'Content-Type': 'application/json',
         },
-        body: jsonEncode(<String, dynamic>{
-          'amount': (double.parse(widget.price) * 100).toInt(),
+        body: jsonEncode({
+          'amount': (double.parse(widget.price) * 100).toInt(), // Send only amount
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        return data['orderId'];
+        if (data != null && data.containsKey('id')) {
+          print('valid response: ${response.body}');
+          return data['id'];
+
+        } else {
+          print('Invalid response: ${response.body}');
+          return '';
+        }
       } else {
         print('Failed to create order: ${response.body}');
         return '';
@@ -247,6 +259,33 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     } catch (e) {
       print('Error fetching order ID: $e');
       return '';
+    }
+  }
+
+  Future<void> fetchUserDetails() async {
+    if (user != null) {
+      try {
+        // Fetch user details (Phone and Full Name)
+        final DocumentSnapshot doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user!.email)
+            .get();
+        if (doc.exists && doc.data() != null) {
+          final data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            phone = data['MobileNumber'] ?? 'No phone number';
+          });
+        } else {
+          setState(() {
+            phone = 'No phone number';
+          });
+        }
+      } catch (e) {
+        print("Error fetching user details: $e");
+        setState(() {
+          phone = 'Error fetching phone number';
+        });
+      }
     }
   }
 
@@ -570,7 +609,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    LoadingAnimationWidget.halfTriangleDot(
+                    LoadingAnimationWidget.staggeredDotsWave(
                       color: Colors.white,
                       size: 50,
                     ),

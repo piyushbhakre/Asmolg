@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:marquee/marquee.dart';
 import 'package:screen_protector/screen_protector.dart';
-
 import '../SeeAllPage.dart';
 import '../aptitude_card.dart';
 import '../department_card.dart';
@@ -22,10 +22,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       .collection('Carousel Ads');
   final CollectionReference _aptitudeCoursesCollection = FirebaseFirestore
       .instance.collection('aptitude');
+  final DocumentReference _offerDocument = FirebaseFirestore.instance.collection('Miscellaneous').doc('SaleOffer');
+
 
   late List<AptitudeCard> aptitudeCourses = [];
   List<DepartmentCard> departmentCards = [];
   List<String> carouselImages = [];
+
 
   bool _isLoading = true;
 
@@ -36,6 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     fetchDepartments();
     fetchAptitudeCourses();
     fetchCarouselAds();
+
   }
 
   Future<void> fetchDepartments() async {
@@ -112,6 +116,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
 
+
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -146,6 +152,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Sale Title with Marquee Animation
+                  StreamBuilder<DocumentSnapshot>(
+                    stream: _offerDocument.snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const SizedBox.shrink(); // No banner while loading
+                      }
+                      if (!snapshot.hasData || snapshot.data == null) {
+                        return const SizedBox.shrink(); // No banner if no data
+                      }
+                      final data = snapshot.data!.data() as Map<String, dynamic>?;
+                      final String? saleTitle = data?['Saletitle'];
+                      final bool status = data?['status'] ?? false;
+
+                      if (saleTitle == null || !status) {
+                        return const SizedBox.shrink(); // No banner if status is false
+                      }
+
+                      return Container(
+                        color: Colors.black,
+                        height: 50,
+                        child: Marquee(
+                          text: saleTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          scrollAxis: Axis.horizontal,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          blankSpace: 20.0,
+                          velocity: 50.0,
+                          pauseAfterRound: const Duration(seconds: 1),
+                          startPadding: 10.0,
+                          accelerationDuration: const Duration(seconds: 1),
+                          accelerationCurve: Curves.linear,
+                          decelerationDuration: const Duration(milliseconds: 500),
+                          decelerationCurve: Curves.easeOut,
+                        ),
+                      );
+                    },
+                  ),
+
                   // Carousel Section
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -161,15 +210,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         return Builder(
                           builder: (BuildContext context) {
                             return Container(
-                              width: MediaQuery
-                                  .of(context)
-                                  .size
-                                  .width,
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 1.0),
+                              width: MediaQuery.of(context).size.width,
+                              margin: const EdgeInsets.symmetric(horizontal: 1.0),
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(15.0),
-
                               ),
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(15.0),
@@ -180,8 +224,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       imageUrl,
                                       fit: BoxFit.cover,
                                     ),
-
-
                                   ],
                                 ),
                               ),
@@ -191,6 +233,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }).toList(),
                     ),
                   ),
+
 
                   // Departments Section
                   _buildSectionHeader(
@@ -263,7 +306,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.white.withOpacity(0.8),
             child: Center(
               child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Colors.blueAccent,
+                color: Colors.black,
                 size: 50,
               ),
             ),

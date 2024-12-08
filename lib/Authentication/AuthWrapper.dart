@@ -1,9 +1,9 @@
 import 'package:asmolg/Authentication/LoginPage.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart' as package_info_plus;
 import 'package:flutter_upgrade_version/flutter_upgrade_version.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // Import Firebase Messaging
 import 'package:shared_preferences/shared_preferences.dart';
 import '../MainScreeens/homepage.dart';
 
@@ -13,6 +13,7 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
   bool _isUpdateRequired = false;
   bool _updateDialogShown = false;
 
@@ -21,26 +22,40 @@ class _AuthWrapperState extends State<AuthWrapper> {
     super.initState();
     _checkForUpdate();
     _handlePermissions();
-    _revokeNotificationPermissions(); // Call method to revoke notification permissions
+
+    // Log a custom event when AuthWrapper is loaded
+    _logPageViewEvent();
+  }
+
+  Future<void> _logPageViewEvent() async {
+    await _analytics.logEvent(
+      name: "page_view",
+      parameters: {"page_name": "auth_wrapper"},
+    );
+    print("Firebase Analytics: Page view logged for AuthWrapper");
   }
 
   Future<void> _checkForUpdate() async {
     package_info_plus.PackageInfo packageInfo = await package_info_plus.PackageInfo.fromPlatform();
     InAppUpdateManager updateManager = InAppUpdateManager();
 
-    // Check for updates on Android
     AppUpdateInfo? updateInfo = await updateManager.checkForUpdate();
     if (updateInfo != null && updateInfo.updateAvailability == UpdateAvailability.updateAvailable) {
       setState(() => _isUpdateRequired = true);
-      if (!_updateDialogShown) _showUpdateDialog(); // Show update dialog if not already shown
+      if (!_updateDialogShown) _showUpdateDialog();
     }
   }
 
   Future<void> _showUpdateDialog() async {
+    await _analytics.logEvent(
+      name: "update_dialog_shown",
+      parameters: {"update_required": _isUpdateRequired},
+    );
+
     setState(() => _updateDialogShown = true);
     showDialog(
       context: context,
-      barrierDismissible: false, // Prevent dialog from closing on outside tap
+      barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
           shape: RoundedRectangleBorder(
@@ -54,7 +69,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    Icon(Icons.shop, color: Colors.blue, size: 60), // Placeholder for Play Store icon
+                    Icon(Icons.shop, color: Colors.blue, size: 60),
                     SizedBox(height: 12),
                     Text(
                       "Update Available",
@@ -78,12 +93,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
                       onPressed: _startUpdate,
                       child: Text(
                         "Update Now",
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white), // White text color
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                     SizedBox(height: 12),
                     Text(
-                      "Abhi update kar lo, future aur bhi bright hoga! 🌟", // Updated humorous phrase in Hinglish
+                      "Abhi update kar lo, future aur bhi bright hoga! 🌟",
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 14, color: Colors.grey),
                     ),
@@ -101,33 +116,25 @@ class _AuthWrapperState extends State<AuthWrapper> {
     InAppUpdateManager manager = InAppUpdateManager();
     AppUpdateInfo? updateInfo = await manager.checkForUpdate();
     if (updateInfo != null) {
+      await _analytics.logEvent(
+        name: "update_started",
+        parameters: {"update_type": "immediate"},
+      );
       await manager.startAnUpdate(type: AppUpdateType.immediate);
     }
   }
 
   Future<void> _handlePermissions() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    int permissionState = prefs.getInt('permissionState') ?? 0; // Get stored permission state, defaulting to 0
+    int permissionState = prefs.getInt('permissionState') ?? 0;
 
     if (permissionState == 0) {
-      // Request permissions if not granted
-      // Example: Requesting notification permissions
-      // Replace with actual permission handling code
-      // For example, you might request notification permissions using firebase_messaging or local_notifications package
-      // FirebaseMessaging.instance.requestPermission();
+      await _analytics.logEvent(
+        name: "permission_request",
+        parameters: {"permission_type": "notification"},
+      );
 
-      // Store permission state as granted (1) once permissions are granted
       await prefs.setInt('permissionState', 1);
-    }
-  }
-
-  Future<void> _revokeNotificationPermissions() async {
-    try {
-      await FirebaseMessaging.instance.deleteToken(); // Revoke notification token
-      print('Notification permissions revoked successfully.');
-    } catch (e) {
-      print('Failed to revoke notification permissions: $e');
-      // Handle error as needed
     }
   }
 

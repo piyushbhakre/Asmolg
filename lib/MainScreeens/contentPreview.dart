@@ -406,10 +406,10 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                   child: Text(
                     widget.departmentName,
                     style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      overflow: TextOverflow.ellipsis,
-                      fontSize: 18
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        overflow: TextOverflow.ellipsis,
+                        fontSize: 18
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -509,50 +509,50 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                  SizedBox(
-                    width: 170,
-                    child: ValueListenableBuilder<int>(
-                      valueListenable: cartNotifier,
-                      builder: (context, cartCount, child) {
-                        final isAdded = cartNotifier.isAdded(widget.subjectName);
-                        return ElevatedButton(
-                          onPressed: () {
-                            if (!isAdded) {
-                              cartNotifier.addItem(
-                                widget.subjectName,
-                                widget.departmentName,
-                                widget.price,
-                              );
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: isAdded ? Colors.green : Colors.orange,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.shopping_cart, color: Colors.white),
-                              const SizedBox(width: 8),
-                              Text(
-                                isAdded ? 'Added' : 'Add to Cart',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
+                      SizedBox(
+                        width: 170,
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: cartNotifier,
+                          builder: (context, cartCount, child) {
+                            final isAdded = cartNotifier.isAdded(widget.subjectName);
+                            return ElevatedButton(
+                              onPressed: () {
+                                if (!isAdded) {
+                                  cartNotifier.addItem(
+                                    widget.subjectName,
+                                    widget.departmentName,
+                                    widget.price,
+                                  );
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor: isAdded ? Colors.green : Colors.orange,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  )],
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.shopping_cart, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    isAdded ? 'Added' : 'Add to Cart',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                      )],
 
 
-                ),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 const Text(

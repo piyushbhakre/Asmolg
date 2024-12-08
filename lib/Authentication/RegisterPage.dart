@@ -197,9 +197,6 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      // Create a user in Firebase Authentication
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Store additional details in Firestore
       await FirebaseFirestore.instance.collection('users').doc(email).set({
@@ -495,6 +492,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
+                    SizedBox(height: 20)
                   ],
                 ),
               ),
@@ -506,7 +504,7 @@ class _RegisterPageState extends State<RegisterPage> {
               color: Colors.black.withOpacity(0.5),
               child: Center(
                 child: LoadingAnimationWidget.staggeredDotsWave(
-                  color: Colors.white,
+                  color: Colors.blueAccent,
                   size: 50,
                 ),
               ),
@@ -516,8 +514,6 @@ class _RegisterPageState extends State<RegisterPage> {
       ),
     );
   }
-
-
 
   Widget _buildLargerTextField({
     required TextEditingController controller,
@@ -530,19 +526,31 @@ class _RegisterPageState extends State<RegisterPage> {
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
+      cursorColor: Colors.blueAccent,
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
-        filled: true,
-        fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue),
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue),
         ),
       ),
+      style: TextStyle(fontSize: 16),
     );
   }
 
-  /// Helper to build a password field with toggle visibility.
   Widget _buildPasswordField({
     required TextEditingController controller,
     required String label,
@@ -555,17 +563,35 @@ class _RegisterPageState extends State<RegisterPage> {
       obscureText: obscureText,
       decoration: InputDecoration(
         labelText: label,
-        hintText: hintText,
+        hintText: hintText, // Hint text color set to blue
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue), // Default border color blue
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+        ),
+        disabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
         ),
         suffixIcon: IconButton(
-          icon: Icon(obscureText ? Icons.visibility_off : Icons.visibility),
+          icon: Icon(
+            obscureText ? Icons.visibility_off : Icons.visibility,
+            color: Colors.blue, // Icon color set to blue
+          ),
           onPressed: onToggle,
         ),
       ),
+      cursorColor: Colors.blueAccent, // Cursor color set to blue
     );
+
   }
 }

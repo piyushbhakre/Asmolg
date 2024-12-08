@@ -306,7 +306,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: Colors.white.withOpacity(0.8),
             child: Center(
               child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Colors.black,
+                color: Colors.blueAccent,
                 size: 50,
               ),
             ),

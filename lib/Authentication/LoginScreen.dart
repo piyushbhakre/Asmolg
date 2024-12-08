@@ -296,49 +296,87 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      hintText: 'Email',
-                      labelText: 'Email',
-                      labelStyle: TextStyle(color: Colors.black54),
-                      errorText: _emailError,  // Show error next to email field
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
+                TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  labelStyle: TextStyle(color: Colors.black), // Label text color set to blue
+                  errorText: _emailError, // Show error next to email field
+                  errorStyle: TextStyle(color: Colors.redAccent), // Error text color
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.blue), // Default border color blue
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
+                  ),
+                  prefixIcon: Icon(
+                    Icons.email,
+                    color: Colors.blue, // Prefix icon color set to blue
+                  ),
+                ),
+                cursorColor: Colors.blueAccent, // Cursor color set to blue
+                keyboardType: TextInputType.emailAddress, // Ensures email-specific keyboard
+                style: TextStyle(fontSize: 16), // Text style
+                ),
+                  SizedBox(height: 16),
+                TextFormField(
+                  controller: _passwordController,
+                  obscureText: _obscureTextPassword,
+                  decoration: InputDecoration(
+                    labelText: 'Password',
+                    labelStyle: TextStyle(color: Colors.black), // Label text color set to blue
+                    errorText: _passwordError, // Show error next to password field
+                    errorStyle: TextStyle(color: Colors.redAccent), // Error text color
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.blue), // Default border color blue
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+                    ),
+                    prefixIcon: Icon(
+                      Icons.password,
+                      color: Colors.blue, // Prefix icon color set to blue
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+                    ),
+                    disabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
+                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _obscureTextPassword ? Icons.visibility_off : Icons.visibility,
+                        color: Colors.blue, // Suffix icon color set to blue
                       ),
+                      onPressed: () {
+                        setState(() {
+                          _obscureTextPassword = !_obscureTextPassword;
+                        });
+                      },
                     ),
                   ),
-                  SizedBox(height: 16),
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: _obscureTextPassword,
-                    decoration: InputDecoration(
-                      hintText: 'Password',
-                      labelText: 'Password',
-                      labelStyle: TextStyle(color: Colors.black54),
-                      errorText: _passwordError,  // Show error next to password field
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureTextPassword
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureTextPassword = !_obscureTextPassword;
-                          });
-                        },
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 16),
+                  cursorColor: Colors.blueAccent, // Cursor color set to blue
+                ),
+
+                SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -394,10 +432,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                ],
+              ]
+              ),
               ),
             ),
-          ),
           if (_isLoading)
             BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -405,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: Colors.black.withOpacity(0.5),
                 child: Center(
                   child: LoadingAnimationWidget.staggeredDotsWave(
-                    color: Colors.white,
+                    color: Colors.blueAccent,
                     size: 50,
                   ),
                 ),

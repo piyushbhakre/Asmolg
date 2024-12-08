@@ -1,3 +1,4 @@
+import 'package:asmolg/MainScreeens/DashboardScreen.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/MainScreeens/contentPreview.dart';
 import 'package:asmolg/NotificationController.dart';
@@ -9,6 +10,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'MainScreeens/CartPage.dart';
+import 'StateManager/CartState.dart';
 
 class SubjectPage extends StatefulWidget {
   final String departmentName;
@@ -92,6 +94,17 @@ class _SubjectPageState extends State<SubjectPage> {
           ],
         ),
         iconTheme: const IconThemeData(color: Colors.black),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // PushReplacement to navigate to Subject() screen and replace the current screen
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => DashboardScreen()), // Replace with your target screen
+                  (route) => false, // This removes all the previous routes from the stack
+            );
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

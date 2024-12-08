@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
-
 import 'fileViewer.dart'; // PDF Viewer
 
 class AptitudeTopicPage extends StatefulWidget {
@@ -99,41 +97,44 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
 
                       // Format ISO string to `dd-MM-yyyy`
                       String formattedDate = '';
-                      if (data['uploadedDate'] != null && data['uploadedDate'] is String) {
-                        DateTime dateTime = DateTime.parse(data['uploadedDate']);
-                        formattedDate = "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
+                      if (data['uploadedDate'] != null &&
+                          data['uploadedDate'] is String) {
+                        DateTime dateTime =
+                            DateTime.parse(data['uploadedDate']);
+                        formattedDate =
+                            "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
                       } else {
                         formattedDate = 'Unknown Date';
                       }
 
                       return {
                         'topic_name': data['topic_name'] ?? 'Unknown Topic',
-                        'fileUrl': data['fileUrl'] ?? '', // Fetch the fileUrl field
-                        'uploadedDate': formattedDate, // Use the formatted date
+                        'fileUrl': data['fileUrl'] ?? '',
+                        // Fetch the fileUrl field
+                        'uploadedDate': formattedDate,
+                        // Use the formatted date
                       };
                     }).where((topic) {
                       // Filter topics based on the search term
-                      return topic['topic_name'].toLowerCase().contains(_searchTerm);
+                      return topic['topic_name']
+                          .toLowerCase()
+                          .contains(_searchTerm);
                     }).toList();
 
                     if (topics.isEmpty) {
-                      return const Center(child: Text('No topics match your search.'));
+                      return const Center(
+                          child: Text('No topics match your search.'));
                     }
 
-                    return GridView.builder(
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 5, // 5 cards per row
-                        crossAxisSpacing: 16, // Space between cards horizontally
-                        mainAxisSpacing: 16, // Space between cards vertically
-                        childAspectRatio: 0.75, // Adjust aspect ratio for card sizing
-                      ),
+                    return ListView.builder(
                       itemCount: topics.length,
                       itemBuilder: (context, index) {
                         final topic = topics[index];
                         return AptitudeTopicCard(
                           topicName: topic['topic_name'],
                           fileUrl: topic['fileUrl'], // Pass the fileUrl
-                          uploadedDate: topic['uploadedDate'], // Pass the formatted date
+                          uploadedDate:
+                              topic['uploadedDate'], // Pass the formatted date
                         );
                       },
                     );
@@ -220,7 +221,8 @@ class AptitudeTopicCard extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  const SizedBox(height: 8), // Space between name and extra information
+                  const SizedBox(height: 8),
+                  // Space between name and extra information
                   Text(
                     'Uploaded: $uploadedDate', // Display the formatted date
                     style: const TextStyle(

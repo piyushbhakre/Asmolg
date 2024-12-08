@@ -1,3 +1,4 @@
+import 'package:asmolg/subject.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -64,6 +65,16 @@ class _NotesPageState extends State<NotesPage> {
           fontSize: 18,
         ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // PushReplacement to navigate to Subject() screen and replace the current screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => SubjectPage(departmentName: widget.departmentDocId)), // Replace with your Subject screen
+            );
+          },
+        ),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

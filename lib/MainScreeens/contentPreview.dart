@@ -1,73 +1,15 @@
-import 'dart:collection';
-
-import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
+import 'package:asmolg/MainScreeens/oneSubBillingpage.dart';
 import 'package:asmolg/fileViewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
 import 'package:loading_animation_widget/loading_animation_widget.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
-
+import '../StateManager/CartState.dart';
 import 'CartPage.dart';
-
-
-class CartNotifier extends ValueNotifier<int> {
-  CartNotifier() : super(0) {
-    _loadCartFromStorage();
-  }
-
-  final Set<Map<String, String>> _cartItems = HashSet();
-
-  Future<void> _loadCartFromStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedCart = prefs.getString('cartItems');
-    if (storedCart != null) {
-      final List<dynamic> decodedCart = jsonDecode(storedCart);
-      for (var item in decodedCart) {
-        _cartItems.add(Map<String, String>.from(item));
-      }
-      value = _cartItems.length; // Update the cart count
-    }
-  }
-
-  Future<void> _saveCartToStorage() async {
-    final prefs = await SharedPreferences.getInstance();
-    final List<Map<String, String>> cartList = _cartItems.toList();
-    prefs.setString('cartItems', jsonEncode(cartList));
-  }
-
-  void addItem(String subjectName, String departmentName, String price) async {
-    if (_cartItems.add({
-      'subjectName': subjectName,
-      'departmentName': departmentName,
-      'price': price,
-    })) {
-      value = _cartItems.length;
-      await _saveCartToStorage();
-    }
-  }
-
-  bool isAdded(String subjectName) {
-    return _cartItems.any((item) => item['subjectName'] == subjectName);
-  }
-
-  void removeItem(String subjectName) async {
-    _cartItems.removeWhere((item) => item['subjectName'] == subjectName);
-    value = _cartItems.length;
-    await _saveCartToStorage();
-  }
-
-  Set<Map<String, String>> get cartItems => _cartItems;
-}
-
-final cartNotifier = CartNotifier();
-
 
 class ContentPreviewPage extends StatefulWidget {
   final String departmentName;
@@ -91,10 +33,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   final User? user = FirebaseAuth.instance.currentUser; // Fetch current logged-in user
   String phone = ''; // Placeholder for phone number
 
-
-
   late Razorpay _razorpay;
-  bool _isSubscribed = false;
   bool _isLoading = false; // Track loading state
 
   @override
@@ -159,107 +98,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
       ).show(context);
     }
     return pdfFiles;
-  }
-
-  Future<void> _openCheckout() async {
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      CherryToast.error(
-        title: const Text('Error'),
-        displayIcon: true,
-        description: const Text('Please log in to make a purchase.'),
-        animationDuration: const Duration(milliseconds: 500),
-      ).show(context);
-      return;
-    }
-
-    if (_isSubscribed) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              NotesPage(
-                departmentDocId: widget.departmentName,
-                subjectDocId: widget.subjectId,
-                subjectName: widget.subjectName,
-              ),
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _isLoading = true; // Show loading overlay
-    });
-
-    String orderId = await _fetchOrderId();
-    if (orderId.isEmpty) {
-      setState(() {
-        _isLoading = false;
-      });
-      CherryToast.error(
-        title: const Text('Error'),
-        displayIcon: true,
-        description: const Text('Failed to create order.'),
-        animationDuration: const Duration(milliseconds: 500),
-      ).show(context);
-      return;
-    }
-
-    var options = {
-      'key': 'rzp_live_ibSut8YutP655P',
-      'amount': (double.parse(widget.price) * 100).toInt().toString(),
-      'notes': '${widget.subjectName}',
-      'description': 'Purchase for ${widget.subjectName}',
-      'order_id': orderId,
-      'prefill': {
-        'contact': phone,
-        'email': user!.email,
-      },
-      'theme': {'color': '#F37254'},
-    };
-
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      print('Error opening Razorpay checkout: $e');
-    }
-  }
-
-  Future<String> _fetchOrderId() async {
-    try {
-      final response = await http.post(
-        Uri.parse(BASE_URL+CREATE_ORDER_ID),
-        headers: <String, String>{
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({
-          'amount': (double.parse(widget.price) * 100).toInt(), // Send only amount
-        }),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data != null && data.containsKey('id')) {
-          print('valid response: ${response.body}');
-          return data['id'];
-
-        } else {
-          print('Invalid response: ${response.body}');
-          return '';
-        }
-      } else {
-        print('Failed to create order: ${response.body}');
-        return '';
-      }
-    } catch (e) {
-      print('Error fetching order ID: $e');
-      return '';
-    }
   }
 
   Future<void> fetchUserDetails() async {
@@ -343,10 +181,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
             'Payment Successful! You now have access to topics.'),
         animationDuration: const Duration(milliseconds: 500),
       ).show(context);
-
-      setState(() {
-        _isSubscribed = true;
-      });
 
       Navigator.pushReplacement(
         context,
@@ -491,7 +325,26 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                       SizedBox(
                         width: 170,
                         child: ElevatedButton(
-                          onPressed: _openCheckout,
+                          onPressed: () {
+                            // Pass the current subject details, including subjectId
+                            final singleSubject = [
+                              {
+                                'subjectName': widget.subjectName,
+                                'departmentName': widget.departmentName,
+                                'price': widget.price,
+                                'subjectId': widget.subjectId
+                              }
+                            ];
+
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => OneSubBillingPage( // Corrected class name
+                                  items: singleSubject,
+                                ),
+                              ),
+                            );
+                          },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             backgroundColor: Colors.blue,
@@ -508,6 +361,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                           ),
                         ),
                       ),
+
                       const SizedBox(width: 10),
                       SizedBox(
                         width: 170,
@@ -549,11 +403,12 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                             );
                           },
                         ),
-                      )],
-
-
+                      ),
+                    ],
                   ),
                 ),
+
+
                 const SizedBox(height: 20),
                 const Text(
                   'Content',

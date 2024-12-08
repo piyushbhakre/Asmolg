@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import '../StateManager/CartState.dart';
 import 'Billing Page.dart';
-import 'contentPreview.dart'; // Import the BillingPage file
 
 class CartPage extends StatelessWidget {
   const CartPage({Key? key}) : super(key: key);
@@ -53,7 +53,7 @@ class CartPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const BillingPage(),
+                        builder: (context) => const BillingPage(items: [],),
                       ),
                     );
                   },

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'contentPreview.dart';
+import '../StateManager/CartState.dart';
 
 class BillingPage extends StatefulWidget {
-  const BillingPage({Key? key}) : super(key: key);
+  const BillingPage({
+    Key? key,
+    required this.items,
+  }) : super(key: key);
+  final List<Map<String, String>> items;
 
   @override
   _BillingPageState createState() => _BillingPageState();

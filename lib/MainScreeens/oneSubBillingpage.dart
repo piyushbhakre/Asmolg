@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';

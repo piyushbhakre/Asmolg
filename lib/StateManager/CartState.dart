@@ -3,9 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
-
 class CartNotifier extends ValueNotifier<int> {
+
   CartNotifier() : super(0) {
     _loadCartFromStorage();
   }
@@ -30,23 +29,35 @@ class CartNotifier extends ValueNotifier<int> {
     prefs.setString('cartItems', jsonEncode(cartList));
   }
 
-  void addItem(String subjectName, String departmentName, String price) async {
+
+  // Method to remove item by subjectId
+  void removeItemById(String subjectId) {
+    cartItems.removeWhere((item) => item['subjectId'] == subjectId);
+    value = cartItems.length; // Update the cart count
+  }
+
+  void addItem(String subjectName, String departmentName, String price, String subjectId) async {
     if (_cartItems.add({
       'subjectName': subjectName,
       'departmentName': departmentName,
       'price': price,
+      'subjectId': subjectId, // Store subjectId
     })) {
       value = _cartItems.length;
       await _saveCartToStorage();
     }
   }
 
-  bool isAdded(String subjectName) {
-    return _cartItems.any((item) => item['subjectName'] == subjectName);
+
+
+  bool isAdded(String subjectId) {
+    // Check if an item with the same subjectId already exists in the cart
+    return _cartItems.any((item) => item['subjectId'] == subjectId);
   }
 
-  void removeItem(String subjectName) async {
-    _cartItems.removeWhere((item) => item['subjectName'] == subjectName);
+  void removeItem(String subjectId) async {
+    // Remove item by subjectId
+    _cartItems.removeWhere((item) => item['subjectId'] == subjectId);
     value = _cartItems.length;
     await _saveCartToStorage();
   }

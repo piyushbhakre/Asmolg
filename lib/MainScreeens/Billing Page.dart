@@ -1,12 +1,21 @@
+import 'dart:convert';
+import 'package:asmolg/MainScreeens/homepage.dart';
+import 'package:asmolg/StateManager/CartState.dart';
+import 'package:cherry_toast/cherry_toast.dart';
+import 'package:http/http.dart' as http;
+import 'package:asmolg/Constant/ApiConstant.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../StateManager/CartState.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({
     Key? key,
     required this.items,
   }) : super(key: key);
+
   final List<Map<String, String>> items;
 
   @override
@@ -14,16 +23,30 @@ class BillingPage extends StatefulWidget {
 }
 
 class _BillingPageState extends State<BillingPage> {
+  late Razorpay _razorpay;
+  bool _isProcessingPayment = false;
+  double discountPercentage = 0.0;
+  double subtotal = 0.0;
+  String appliedCoupon = "";
+  bool isApplyingCoupon = false;
+  double? gstRate;
+  bool isLoadingGST = true;
   final TextEditingController _couponController = TextEditingController();
-  double discountPercentage = 0.0; // Discount percentage
-  String appliedCoupon = ""; // The applied coupon code, if any
-  bool isApplyingCoupon = false; // For showing progress
-  double gstRate = 0.0; // GST percentage fetched from Firestore
 
   @override
   void initState() {
     super.initState();
     _fetchGST();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
   }
 
   Future<void> _fetchGST() async {
@@ -32,10 +55,10 @@ class _BillingPageState extends State<BillingPage> {
           .collection('Miscellaneous')
           .doc('GST')
           .get();
-
       if (doc.exists) {
         setState(() {
-          gstRate = doc.data()?['gst'].toDouble() ?? 0.0;
+          gstRate = doc.data()?['gst'].toDouble() ?? 0.00;
+          isLoadingGST = false;
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -46,12 +69,14 @@ class _BillingPageState extends State<BillingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error fetching GST: $e")),
       );
+      setState(() {
+        isLoadingGST = false;
+      });
     }
   }
 
   Future<void> _applyCoupon() async {
     final enteredCode = _couponController.text.trim();
-
     if (enteredCode.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter a coupon code.")),
@@ -67,7 +92,6 @@ class _BillingPageState extends State<BillingPage> {
       final snapshot = await FirebaseFirestore.instance
           .collection('Miscellaneous')
           .get();
-
       bool isValidCoupon = false;
 
       for (var doc in snapshot.docs) {
@@ -100,7 +124,7 @@ class _BillingPageState extends State<BillingPage> {
           const SnackBar(content: Text("Invalid coupon code.")),
         );
       } else {
-        _couponController.clear(); // Reset coupon field on valid application
+        _couponController.clear();
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -113,26 +137,149 @@ class _BillingPageState extends State<BillingPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    double subtotal = 0.0;
-    for (var item in cartNotifier.cartItems) {
-      subtotal += double.parse(item['price']!);
+  Future<String> _fetchOrderId(double total) async {
+    try {
+      final response = await http.post(
+        Uri.parse(BASE_URL + CREATE_ORDER_ID),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'amount': (total * 100).toInt()}),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['id'] ?? '';
+      } else {
+        return '';
+      }
+    } catch (e) {
+      return '';
+    }
+  }
+
+  Future<void> _openCheckout(double total) async {
+    setState(() {
+      _isProcessingPayment = true;
+    });
+
+    final orderId = await _fetchOrderId(total);
+    if (orderId.isEmpty) {
+      setState(() {
+        _isProcessingPayment = false;
+      });
+      return;
     }
 
-    double gst = subtotal * (gstRate / 100);
-    double discount = subtotal * (discountPercentage / 100);
+    final User? user = FirebaseAuth.instance.currentUser;
+    final String email = user?.email ?? '';
+    final String phone = '1234567890'; // Replace with actual logic to fetch user phone
 
+    var options = {
+      'key': 'rzp_live_ibSut8YutP655P',
+      'amount': (total * 100).toInt(),
+      'order_id': orderId,
+      'prefill': {'email': email, 'contact': phone},
+      'theme': {'color': '#F37254'},
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      setState(() {
+        _isProcessingPayment = false;
+      });
+    }
+  }
+
+  Future<String> _getUserMobileNumber(String email) async {
+    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection(
+        'users').doc(email).get();
+    return userDoc['MobileNumber'] ?? '0000000000';
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
+    String sub = subtotal.toString();
+
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      String email = user.email ?? '';
+      String mobile = await _getUserMobileNumber(email);
+
+      // Save the payment details for each subject
+      await FirebaseFirestore.instance.collection('users').doc(email).set({
+        'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
+          return {
+            'subject_name': item['subjectName'],
+            'department_name': item['departmentName'],
+            'price': item['price'],
+            'subject_id': item['subjectId'],
+            'mobile_no': mobile,
+            'price': sub,
+            'date': DateTime.now().toIso8601String(),
+            'paymentId': response.paymentId,
+          };
+        }).toList())
+      }, SetOptions(merge: true));
+
+      await FirebaseFirestore.instance.collection('Subscriptions').doc(email).set({
+        'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
+          return {
+            'subject_name': item['subjectName'],
+            'price': item['price'],
+            'department_name': item['departmentName'],
+            'subject_id': item['subjectId'],
+            'mobile_no': mobile,
+            'price': sub,
+            'date': DateTime.now().toIso8601String(),
+            'paymentId': response.paymentId,
+          };
+        }).toList())
+      }, SetOptions(merge: true));
+
+      // Remove purchased items from the cart
+      for (var item in widget.items) {
+        cartNotifier.removeItem(item['subjectId'] ?? ''); // Remove by subjectId
+      }
+
+      setState(() {
+        _isProcessingPayment = false;
+      });
+
+      CherryToast.success(
+        title: const Text('Success'),
+        displayIcon: true,
+        description: const Text('Payment Successful! You now have access to topics.'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => HomeScreen(),
+        ),
+      );
+    }
+  }
+
+
+  // Function to handle payment error
+  void _handlePaymentError(PaymentFailureResponse response) {
+    setState(() {
+      _isProcessingPayment = false;
+    });
+  }
+
+  // Function to handle external wallet
+  void _handleExternalWallet(ExternalWalletResponse response) {}
+
+  @override
+  Widget build(BuildContext context) {
+    double subtotal = widget.items.fold(0.0, (sum, item) => sum + 0.3);
+    double gst = (gstRate ?? 0.00) * subtotal / 100;
+    double discount = subtotal * (discountPercentage / 100);
     double total = subtotal + gst - discount;
 
     return Scaffold(
-      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text(
-          "Billing",
-          style: TextStyle(color: Colors.black),
-        ),
-        centerTitle: true,
+        title: const Text("Billing", style: TextStyle(color: Colors.black)),
         backgroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.black),
         elevation: 1,
@@ -143,129 +290,50 @@ class _BillingPageState extends State<BillingPage> {
           children: [
             Expanded(
               child: ListView.builder(
-                itemCount: cartNotifier.cartItems.length,
+                itemCount: widget.items.length,
                 itemBuilder: (context, index) {
-                  final item = cartNotifier.cartItems.elementAt(index);
-                  return ListTile(
-                    title: Text(
-                      item['subjectName']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                  final item = widget.items[index];
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    elevation: 4.0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    subtitle: Text("Department: ${item['departmentName']}"),
-                    trailing: Text(
-                      "₹ ${item['price']}",
-                      style: const TextStyle(fontWeight: FontWeight.bold,fontSize: 15),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Subject: ${item['subjectName']}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Text("Department: ${item['departmentName']}"),
+                          const SizedBox(height: 4),
+                          Text("Subject ID: ${item['subjectId']}", style: const TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 4),
+                          Text("Price: ₹ ${item['price']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                        ],
+                      ),
                     ),
                   );
                 },
               ),
             ),
             const Divider(thickness: 1),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Subtotal", style: TextStyle(fontSize: 16)),
-                Text("₹ ${subtotal.toStringAsFixed(2)}",
-                    style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("GST (${gstRate.toStringAsFixed(1)}%)",
-                    style: const TextStyle(fontSize: 16)),
-                Text("₹ ${gst.toStringAsFixed(2)}",
-                    style: const TextStyle(fontSize: 16)),
-              ],
-            ),
-            const SizedBox(height: 8),
+            isLoadingGST
+                ? _shimmerLoadingPlaceholder()
+                : _buildSubtotalRow("Subtotal", subtotal),
+            isLoadingGST
+                ? _shimmerLoadingPlaceholder()
+                : _buildSubtotalRow("GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst),
             if (discount > 0)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})",
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                  Text("- ₹ ${discount.toString()}",
-                      style: const TextStyle(fontSize: 16, color: Colors.green)),
-
-                ],
-              ),
+              _buildSubtotalRow("Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})", -discount, isDiscount: true),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Total",
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold)),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (discount > 0)
-                      Text(
-                        "₹ ${(subtotal + gst).toStringAsFixed(2)}",
-                        style: const TextStyle(
-                          fontSize: 14,
-                          decoration: TextDecoration.lineThrough,
-                          color: Colors.red,
-                        ),
-                      ),
-                    Text(
-                      "₹ ${total.toStringAsFixed(2)}",
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            isLoadingGST ? _shimmerLoadingPlaceholder() : _buildTotalRow("Total", total),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _couponController,
-                    decoration: InputDecoration(
-                      hintText: "Enter Coupon Code",
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: isApplyingCoupon ? null : _applyCoupon,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isApplyingCoupon ? Colors.grey : Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: isApplyingCoupon
-                      ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : const Text(
-                    "Apply",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
-            ),
+            _buildCouponRow(),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: () {
-                // Trigger payment logic
-                print("Proceeding to payment with total: ₹ ${total.toStringAsFixed(2)}");
-              },
+              onPressed: _isProcessingPayment ? null : () => _openCheckout(total),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 backgroundColor: Colors.black,
@@ -273,16 +341,91 @@ class _BillingPageState extends State<BillingPage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
-              child: const Center(
-                child: Text(
-                  "Pay Now",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
-              ),
+              child: _isProcessingPayment
+                  ? const CircularProgressIndicator(color: Colors.white)
+                  : const Text("Pay Now", style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
           ],
         ),
       ),
     );
   }
+
+  // Helper function to show shimmer effect
+  Widget _shimmerLoadingPlaceholder() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: Container(
+        height: 20,
+        color: Colors.grey[300],
+        margin: const EdgeInsets.symmetric(vertical: 4),
+      ),
+    );
+  }
+
+  // Helper function to build subtotal rows
+  Widget _buildSubtotalRow(String title, double value, {bool isDiscount = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 16)),
+        Text(
+          (isDiscount ? "- " : "") + "₹ ${value.toStringAsFixed(2)}",
+          style: TextStyle(fontSize: 16, color: isDiscount ? Colors.green : Colors.black),
+        ),
+      ],
+    );
+  }
+
+  // Helper function to build total row
+  Widget _buildTotalRow(String title, double value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        Text("₹ ${value.toStringAsFixed(2)}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // Helper function to handle the coupon row
+  Widget _buildCouponRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _couponController,
+            decoration: InputDecoration(
+              hintText: "Enter Coupon Code",
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        ElevatedButton(
+          onPressed: isApplyingCoupon ? null : _applyCoupon,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isApplyingCoupon ? Colors.grey : Colors.black,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: isApplyingCoupon
+              ? const SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 2,
+            ),
+          )
+              : const Text("Apply", style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
 }
+

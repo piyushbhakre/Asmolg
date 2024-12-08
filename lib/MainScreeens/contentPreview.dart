@@ -1,11 +1,8 @@
-import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/MainScreeens/oneSubBillingpage.dart';
 import 'package:asmolg/fileViewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
-import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import '../StateManager/CartState.dart';
@@ -33,21 +30,15 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   final User? user = FirebaseAuth.instance.currentUser; // Fetch current logged-in user
   String phone = ''; // Placeholder for phone number
 
-  late Razorpay _razorpay;
   bool _isLoading = false; // Track loading state
 
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
   }
 
   @override
   void dispose() {
-    _razorpay.clear();
     super.dispose();
   }
 
@@ -125,102 +116,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
         });
       }
     }
-  }
-
-  void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    setState(() {
-      _isLoading = false; // Hide loading overlay
-    });
-    User? user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      String userEmail = user.email ?? '';
-      String mobileNo = await _getUserMobileNumber(userEmail);
-
-      await FirebaseFirestore.instance.collection('users').doc(userEmail).set({
-        'bought_content': FieldValue.arrayUnion([{
-          'subject_name': widget.subjectName,
-          'subject_id': widget.subjectId,
-          'price': widget.price,
-          'department_name': widget.departmentName,
-          'date': DateTime.now().toIso8601String(),
-          'mobile_no': mobileNo,
-          'payment_id': response.paymentId,
-        }
-        ]),
-      }, SetOptions(merge: true));
-
-      await FirebaseFirestore.instance.collection('Subscriptions').doc(
-          userEmail).set({
-        'bought_content': FieldValue.arrayUnion([{
-          'subject_name': widget.subjectName,
-          'subject_id': widget.subjectId,
-          'price': widget.price,
-          'department_name': widget.departmentName,
-          'date': DateTime.now().toIso8601String(),
-          'mobile_no': mobileNo,
-          'payment_id': response.paymentId,
-        }
-        ]),
-      }, SetOptions(merge: true));
-
-      AwesomeNotifications().createNotification(
-        content: NotificationContent(
-          id: 1,
-          channelKey: "basic channel",
-          title: "Purchase Successful",
-          body: "You have successfully purchased the ${widget
-              .subjectName} subject!",
-          notificationLayout: NotificationLayout.Default,
-        ),
-      );
-
-      CherryToast.success(
-        title: const Text('Success'),
-        displayIcon: true,
-        description: const Text(
-            'Payment Successful! You now have access to topics.'),
-        animationDuration: const Duration(milliseconds: 500),
-      ).show(context);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              NotesPage(
-                departmentDocId: widget.departmentName,
-                subjectDocId: widget.subjectId,
-                subjectName: widget.subjectName,
-              ),
-        ),
-      );
-    }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    setState(() {
-      _isLoading = false;
-    });
-    CherryToast.error(
-      title: const Text('Payment Failed'),
-      displayIcon: true,
-      description: Text('Payment Failed: ${response.message}'),
-      animationDuration: const Duration(milliseconds: 500),
-    ).show(context);
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    CherryToast.info(
-      title: const Text('External Wallet Used'),
-      displayIcon: true,
-      description: Text('External Wallet Used: ${response.walletName}'),
-      animationDuration: const Duration(milliseconds: 500),
-    ).show(context);
-  }
-
-  Future<String> _getUserMobileNumber(String email) async {
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection(
-        'users').doc(email).get();
-    return userDoc['MobileNumber'] ?? '0000000000';
   }
 
   @override
@@ -361,27 +256,31 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                           ),
                         ),
                       ),
-
                       const SizedBox(width: 10),
                       SizedBox(
                         width: 170,
                         child: ValueListenableBuilder<int>(
                           valueListenable: cartNotifier,
                           builder: (context, cartCount, child) {
-                            final isAdded = cartNotifier.isAdded(widget.subjectName);
+                            final isAdded = cartNotifier.isAdded(widget.subjectId); // Check if the item is added using subjectId
                             return ElevatedButton(
                               onPressed: () {
-                                if (!isAdded) {
+                                if (isAdded) {
+                                  // Remove item from cart if it's already added
+                                  cartNotifier.removeItem(widget.subjectId);
+                                } else {
+                                  // Add item to cart if it's not already added
                                   cartNotifier.addItem(
                                     widget.subjectName,
                                     widget.departmentName,
                                     widget.price,
+                                    widget.subjectId,
                                   );
                                 }
                               },
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(vertical: 16),
-                                backgroundColor: isAdded ? Colors.green : Colors.orange,
+                                backgroundColor: isAdded ? Colors.green : Colors.orange, // Set color based on whether it's added
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -392,7 +291,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                                   const Icon(Icons.shopping_cart, color: Colors.white),
                                   const SizedBox(width: 8),
                                   Text(
-                                    isAdded ? 'Added' : 'Add to Cart',
+                                    isAdded ? 'Added' : 'Add to Cart', // Button text changes based on cart state
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 16,
@@ -404,11 +303,10 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                           },
                         ),
                       ),
+
                     ],
                   ),
                 ),
-
-
                 const SizedBox(height: 20),
                 const Text(
                   'Content',
@@ -467,15 +365,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                     LoadingAnimationWidget.staggeredDotsWave(
                       color: Colors.white,
                       size: 50,
-                    ),
-                    const SizedBox(height: 20),
-                    const Text(
-                      "Loading, please wait 🕒. \nThis may take more than a minute ⏳.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                      ),
                     ),
                   ],
                 ),

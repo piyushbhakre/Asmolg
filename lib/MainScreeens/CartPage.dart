@@ -39,6 +39,7 @@ class CartPage extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final item = cartNotifier.cartItems.elementAt(index);
                     return CartCard(
+                      subjectId: item['subjectId']!,  // Passing the subjectId
                       subjectName: item['subjectName']!,
                       departmentName: item['departmentName']!,
                       price: item['price']!,
@@ -50,10 +51,20 @@ class CartPage extends StatelessWidget {
                 padding: const EdgeInsets.all(16.0),
                 child: ElevatedButton(
                   onPressed: () {
+                    // Pass the cart items (with subjectId) to the BillingPage
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const BillingPage(items: [],),
+                        builder: (context) => BillingPage(
+                          items: cartNotifier.cartItems.map((item) {
+                            return {
+                              'subjectId': item['subjectId']!,
+                              'subjectName': item['subjectName']!,
+                              'departmentName': item['departmentName']!,
+                              'price': item['price']!,
+                            };
+                          }).toList(),
+                        ),
                       ),
                     );
                   },
@@ -80,12 +91,14 @@ class CartPage extends StatelessWidget {
 }
 
 class CartCard extends StatelessWidget {
+  final String subjectId;
   final String subjectName;
   final String departmentName;
   final String price;
 
   const CartCard({
     Key? key,
+    required this.subjectId,
     required this.subjectName,
     required this.departmentName,
     required this.price,
@@ -114,13 +127,16 @@ class CartCard extends StatelessWidget {
           Text("Department: $departmentName"),
           const SizedBox(height: 8),
           Text("Price: $price"),
+          const SizedBox(height: 8),
+          Text("Subject ID: $subjectId"), // Display subjectId
           const SizedBox(height: 16),
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton(
               onPressed: () {
-                cartNotifier.removeItem(subjectName);
-                print("Removed item: $subjectName");
+                // Remove item based on subjectId
+                cartNotifier.removeItemById(subjectId);
+                print("Removed item with Subject ID: $subjectId");
               },
               style: OutlinedButton.styleFrom(
                 backgroundColor: Colors.white,
@@ -140,3 +156,4 @@ class CartCard extends StatelessWidget {
     );
   }
 }
+

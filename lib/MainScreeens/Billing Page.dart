@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:asmolg/MainScreeens/homepage.dart';
 import 'package:asmolg/StateManager/CartState.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -78,8 +79,13 @@ class _BillingPageState extends State<BillingPage> {
   Future<void> _applyCoupon() async {
     final enteredCode = _couponController.text.trim();
     if (enteredCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a coupon code.")),
+      Fluttertoast.showToast(
+        msg: "Please enter a coupon code.",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
       return;
     }
@@ -89,9 +95,7 @@ class _BillingPageState extends State<BillingPage> {
     });
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('Miscellaneous')
-          .get();
+      final snapshot = await FirebaseFirestore.instance.collection('Miscellaneous').get();
       bool isValidCoupon = false;
 
       for (var doc in snapshot.docs) {
@@ -103,12 +107,13 @@ class _BillingPageState extends State<BillingPage> {
           });
           isValidCoupon = true;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off.",
-              ),
-            ),
+          Fluttertoast.showToast(
+            msg: "Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off.",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.green,
+            textColor: Colors.white,
+            fontSize: 16.0,
           );
           break;
         }
@@ -120,15 +125,25 @@ class _BillingPageState extends State<BillingPage> {
           appliedCoupon = "";
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Invalid coupon code.")),
+        Fluttertoast.showToast(
+          msg: "Invalid coupon code.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
         );
       } else {
         _couponController.clear();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error applying coupon: $e")),
+      Fluttertoast.showToast(
+        msg: "Error applying coupon: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
     } finally {
       setState(() {
@@ -236,7 +251,7 @@ class _BillingPageState extends State<BillingPage> {
 
       // Remove purchased items from the cart
       for (var item in widget.items) {
-        cartNotifier.removeItem(item['subjectId'] ?? ''); // Remove by subjectId
+        cartNotifier.removeItemById(item['subjectId'] ?? ''); // Remove by subjectId
       }
 
       setState(() {
@@ -272,7 +287,7 @@ class _BillingPageState extends State<BillingPage> {
 
   @override
   Widget build(BuildContext context) {
-    double subtotal = widget.items.fold(0.0, (sum, item) => sum + 0.3);
+    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price'] ?? '0.00'));;
     double gst = (gstRate ?? 0.00) * subtotal / 100;
     double discount = subtotal * (discountPercentage / 100);
     double total = subtotal + gst - discount;
@@ -428,4 +443,3 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 }
-

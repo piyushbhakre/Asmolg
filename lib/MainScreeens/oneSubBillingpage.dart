@@ -282,8 +282,7 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
 
   @override
   Widget build(BuildContext context) {
-    //double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
-    double subtotal = widget.items.fold(0.0, (sum, item) => sum + 1.00);
+    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
     double gst = (gstRate ?? 0.00) * subtotal / 100;
     double discount = subtotal * (discountPercentage / 100);
     double total = subtotal + gst - discount;

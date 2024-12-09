@@ -267,7 +267,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                               onPressed: () {
                                 if (isAdded) {
                                   // Remove item from cart if it's already added
-                                  cartNotifier.removeItem(widget.subjectId);
+                                  cartNotifier.removeItemById(widget.subjectId);
                                 } else {
                                   // Add item to cart if it's not already added
                                   cartNotifier.addItem(

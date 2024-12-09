@@ -1,6 +1,6 @@
-import 'package:asmolg/MainScreeens/DashboardScreen.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/MainScreeens/contentPreview.dart';
+import 'package:asmolg/MainScreeens/homepage.dart';
 import 'package:asmolg/NotificationController.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
@@ -99,7 +99,7 @@ class _SubjectPageState extends State<SubjectPage> {
             // PushReplacement to navigate to Subject() screen and replace the current screen
             Navigator.pushAndRemoveUntil(
               context,
-              MaterialPageRoute(builder: (context) => DashboardScreen()), // Replace with your target screen
+              MaterialPageRoute(builder: (context) => HomeScreen()), // Replace with your target screen
                   (route) => false, // This removes all the previous routes from the stack
             );
           },

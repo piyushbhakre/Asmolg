@@ -1,3 +1,5 @@
+import 'package:asmolg/MainScreeens/CartPage.dart';
+import 'package:asmolg/StateManager/CartState.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -137,13 +139,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
             actions: [
               Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: CircleAvatar(
-                  backgroundImage: AssetImage('assets/logo.png'),
-                  radius: 20,
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const CartPage()),
+                    );
+                  },
+                  child: Stack(
+                    alignment: Alignment.topRight,
+                    children: [
+                      const Icon(Icons.shopping_cart, color: Colors.black),
+                      ValueListenableBuilder<int>(
+                        valueListenable: cartNotifier,
+                        builder: (context, cartCount, child) {
+                          return cartCount > 0
+                              ? Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.red,
+                            ),
+                            child: Text(
+                              '$cartCount',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                              : const SizedBox.shrink();
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+              ),SizedBox(width: 10)
             ],
           ),
+
           body: GestureDetector(
             onTap: () {
               FocusScope.of(context).unfocus();

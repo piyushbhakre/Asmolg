@@ -1,13 +1,15 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:asmolg/MainScreeens/homepage.dart';
 import 'package:asmolg/StateManager/CartState.dart';
 import 'package:cherry_toast/cherry_toast.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -79,14 +81,13 @@ class _BillingPageState extends State<BillingPage> {
   Future<void> _applyCoupon() async {
     final enteredCode = _couponController.text.trim();
     if (enteredCode.isEmpty) {
-      Fluttertoast.showToast(
-        msg: "Please enter a coupon code.",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      CherryToast.info(
+        title: const Text("Info"),
+        description: const Text("Please enter a coupon code."),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
       return;
     }
 
@@ -107,14 +108,13 @@ class _BillingPageState extends State<BillingPage> {
           });
           isValidCoupon = true;
 
-          Fluttertoast.showToast(
-            msg: "Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off.",
-            toastLength: Toast.LENGTH_SHORT,
-            gravity: ToastGravity.BOTTOM,
-            backgroundColor: Colors.green,
-            textColor: Colors.white,
-            fontSize: 16.0,
-          );
+          CherryToast.success(
+            title: const Text("Success"),
+            description: Text("Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off."),
+            toastPosition: Position.top,
+            animationType: AnimationType.fromTop,
+            autoDismiss: true,
+          ).show(context);
           break;
         }
       }
@@ -125,26 +125,24 @@ class _BillingPageState extends State<BillingPage> {
           appliedCoupon = "";
         });
 
-        Fluttertoast.showToast(
-          msg: "Invalid coupon code.",
-          toastLength: Toast.LENGTH_SHORT,
-          gravity: ToastGravity.BOTTOM,
-          backgroundColor: Colors.red,
-          textColor: Colors.white,
-          fontSize: 16.0,
-        );
+        CherryToast.error(
+          title: const Text("Invalid Coupon"),
+          description: const Text("Invalid coupon code."),
+          toastPosition: Position.top,
+          animationType: AnimationType.fromTop,
+          autoDismiss: true,
+        ).show(context);
       } else {
         _couponController.clear();
       }
     } catch (e) {
-      Fluttertoast.showToast(
-        msg: "Error applying coupon: $e",
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
+      CherryToast.error(
+        title: const Text("Error"),
+        description: Text("Error applying coupon: $e"),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
     } finally {
       setState(() {
         isApplyingCoupon = false;
@@ -163,9 +161,23 @@ class _BillingPageState extends State<BillingPage> {
         final data = jsonDecode(response.body);
         return data['id'] ?? '';
       } else {
+        CherryToast.error(
+          title: const Text("Order ID Error"),
+          description: const Text("Failed to fetch order ID."),
+          toastPosition: Position.top,
+          animationType: AnimationType.fromTop,
+          autoDismiss: true,
+        ).show(context);
         return '';
       }
     } catch (e) {
+      CherryToast.error(
+        title: const Text("Error"),
+        description: Text("Error fetching order ID: $e"),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
       return '';
     }
   }
@@ -185,10 +197,10 @@ class _BillingPageState extends State<BillingPage> {
 
     final User? user = FirebaseAuth.instance.currentUser;
     final String email = user?.email ?? '';
-    final String phone = '1234567890'; // Replace with actual logic to fetch user phone
+    final String phone = await _getUserMobileNumber(email);
 
     var options = {
-      'key': 'rzp_live_ibSut8YutP655P',
+      'key': RAZOR_PAY_LIVE_KEY,
       'amount': (total * 100).toInt(),
       'order_id': orderId,
       'prefill': {'email': email, 'contact': phone},
@@ -201,6 +213,14 @@ class _BillingPageState extends State<BillingPage> {
       setState(() {
         _isProcessingPayment = false;
       });
+
+      CherryToast.error(
+        title: const Text("Payment Error"),
+        description: Text("An unexpected error occurred: $e"),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
     }
   }
 
@@ -274,99 +294,235 @@ class _BillingPageState extends State<BillingPage> {
     }
   }
 
-
-  // Function to handle payment error
   void _handlePaymentError(PaymentFailureResponse response) {
     setState(() {
       _isProcessingPayment = false;
     });
+
+    CherryToast.error(
+      title: const Text("Payment Failed"),
+      description: Text(response.message ?? "Payment could not be completed."),
+      toastPosition: Position.top,
+      animationType: AnimationType.fromTop,
+      autoDismiss: true,
+    ).show(context);
   }
 
-  // Function to handle external wallet
-  void _handleExternalWallet(ExternalWalletResponse response) {}
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    CherryToast.info(
+      title: const Text("External Wallet"),
+      description: Text("You selected: ${response.walletName}"),
+      toastPosition: Position.top,
+      animationType: AnimationType.fromTop,
+      autoDismiss: true,
+    ).show(context);
+  }
 
   @override
   Widget build(BuildContext context) {
-    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price'] ?? '0.00'));;
+    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
     double gst = (gstRate ?? 0.00) * subtotal / 100;
     double discount = subtotal * (discountPercentage / 100);
     double total = subtotal + gst - discount;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Billing", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 1,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
+      return Scaffold(
+        body: Stack(
           children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.items.length,
-                itemBuilder: (context, index) {
-                  final item = widget.items[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    elevation: 4.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Subject: ${item['subjectName']}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Text("Department: ${item['departmentName']}"),
-                          const SizedBox(height: 4),
-                          Text("Subject ID: ${item['subjectId']}", style: const TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Text("Price: ₹ ${item['price']}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                        ],
+            // The main content, with the blur effect on the background
+            Positioned.fill(
+              child: Column(
+                children: [
+                  // AppBar will be inside the Stack to get blurred
+                  AppBar(
+                    title: const Text("Billing", style: TextStyle(color: Colors.white)),
+                    backgroundColor: Colors.black,
+                    iconTheme: const IconThemeData(color: Colors.white),
+                    elevation: 1,
+                  ),
+                  Expanded(
+                    child: Container(
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          children: [
+                            Expanded(
+                              child: ListView.builder(
+                                itemCount: widget.items.length,
+                                itemBuilder: (context, index) {
+                                  final item = widget.items[index];
+                                  return Column(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(16.0),
+                                        color: Colors.white,
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              "${item['subjectName']}",
+                                              style: const TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "Department: ${item['departmentName']}",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.black54,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "Price: ₹ ${item['price']}",
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black87,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Divider(
+                                        height: 1,
+                                        color: Colors.grey.shade300,
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                            const Divider(thickness: 1, color: Colors.black),
+                            isLoadingGST
+                                ? _shimmerLoadingPlaceholder()
+                                : _buildSubtotalRow(
+                              "Subtotal", subtotal,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            isLoadingGST
+                                ? _shimmerLoadingPlaceholder()
+                                : _buildSubtotalRow(
+                              "GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.black54,
+                              ),
+                            ),
+                            if (discount > 0)
+                              _buildSubtotalRow(
+                                "Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})",
+                                -discount,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.normal,
+                                  color: Colors.green,
+                                  shadows: [
+                                    Shadow(
+                                      blurRadius: 8.0,
+                                      color: Colors.green,
+                                      offset: Offset(0, 0),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 16),
+                            isLoadingGST
+                                ? _shimmerLoadingPlaceholder()
+                                : _buildTotalRow(
+                              "Total", total,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _buildCouponRow(
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.blueAccent,
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () => _openCheckout(total),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  backgroundColor: Colors.black,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                child: const Text(
+                                  "Pay Now",
+                                  style: TextStyle(color: Colors.white, fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
-            const Divider(thickness: 1),
-            isLoadingGST
-                ? _shimmerLoadingPlaceholder()
-                : _buildSubtotalRow("Subtotal", subtotal),
-            isLoadingGST
-                ? _shimmerLoadingPlaceholder()
-                : _buildSubtotalRow("GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst),
-            if (discount > 0)
-              _buildSubtotalRow("Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})", -discount, isDiscount: true),
-            const SizedBox(height: 16),
-            isLoadingGST ? _shimmerLoadingPlaceholder() : _buildTotalRow("Total", total),
-            const SizedBox(height: 16),
-            _buildCouponRow(),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isProcessingPayment ? null : () => _openCheckout(total),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+            if (_isProcessingPayment)
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: Center(
+                      child: Card(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        elevation: 8,
+                        color: Colors.white,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              LoadingAnimationWidget.staggeredDotsWave(
+                                color: Colors.black,
+                                size: 50,
+                              ),
+                              const SizedBox(height: 16),
+                              const Text(
+                                "Ready for payment...",
+                                style: TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              child: _isProcessingPayment
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Pay Now", style: TextStyle(color: Colors.white, fontSize: 16)),
-            ),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  // Helper function to show shimmer effect
   Widget _shimmerLoadingPlaceholder() {
     return Shimmer.fromColors(
       baseColor: Colors.grey[300]!,
@@ -379,22 +535,23 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 
-  // Helper function to build subtotal rows
-  Widget _buildSubtotalRow(String title, double value, {bool isDiscount = false}) {
+  Widget _buildSubtotalRow(String title, double value, {bool isDiscount = false, required TextStyle style}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16)),
+        Text(title, style: style),
         Text(
           (isDiscount ? "- " : "") + "₹ ${value.toStringAsFixed(2)}",
-          style: TextStyle(fontSize: 16, color: isDiscount ? Colors.green : Colors.black),
+          style: TextStyle(
+            fontSize: 16,
+            color: isDiscount ? Colors.green : Colors.black,  // Ensure discount text is green
+          ),
         ),
       ],
     );
   }
 
-  // Helper function to build total row
-  Widget _buildTotalRow(String title, double value) {
+  Widget _buildTotalRow(String title, double value, {required TextStyle style}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -404,8 +561,7 @@ class _BillingPageState extends State<BillingPage> {
     );
   }
 
-  // Helper function to handle the coupon row
-  Widget _buildCouponRow() {
+  Widget _buildCouponRow({required TextStyle style}) {
     return Row(
       children: [
         Expanded(
@@ -433,7 +589,7 @@ class _BillingPageState extends State<BillingPage> {
             width: 16,
             height: 16,
             child: CircularProgressIndicator(
-              color: Colors.white,
+              color: Colors.black,
               strokeWidth: 2,
             ),
           )

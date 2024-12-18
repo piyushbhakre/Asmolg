@@ -1,6 +1,7 @@
 import 'package:asmolg/AptitudeTopicPage.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:magic_text/magic_text.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -204,7 +205,7 @@ class _AptitudeCardState extends State<AptitudeCard> {
               ),
               child: Image.asset(
                 widget.imageUrl,
-                height: 120,
+                height: 110,
                 width: double.infinity,
                 fit: BoxFit.fill,
               ),
@@ -214,13 +215,17 @@ class _AptitudeCardState extends State<AptitudeCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  MagicText(
                     widget.title,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    breakWordCharacter: '-', // Adjust word breaks if necessary
+                    smartSizeMode: true, // Enables responsive resizing based on screen size
+                    minFontSize: 11, // Set minimum font size
+                    maxFontSize: 15, // Set maximum font size
+                    textStyle: TextStyle(
+                      fontSize: 14, // Base font size that will adjust responsively
+                      color: Colors.black87, // Text color
+                      fontWeight: FontWeight.w600, // Font weight
+                    ), asyncMode: true,
                   ),
 
                   Text(

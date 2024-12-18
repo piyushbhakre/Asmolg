@@ -8,6 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Firestore for dynamic data
 import 'dart:async';
+import 'package:google_fonts/google_fonts.dart';
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -22,7 +23,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   late AnimationController _controller;
 
   @override
-  @override
   void initState() {
     super.initState();
     // Move the async tasks to a separate method.
@@ -31,6 +31,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   Future<void> _initializeApp() async {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    // Fetch data dynamically from Firestore
+    await _fetchSplashData();
 
     // Initialize Animation Controller for looping animation
     _controller = AnimationController(
@@ -38,16 +40,15 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       duration: Duration(seconds: 3),
     )..repeat(reverse: true);
 
-    // Fetch data dynamically from Firestore
-    await _fetchSplashData();
 
     // Set up Firebase Messaging and handle messages
     await setupFirebaseMessaging();
     await _storeFcmToken();
     await deleteExpiredSubjects();
 
+
     // Show splash screen for 3 seconds before navigating
-    Timer(Duration(seconds: 4), () {
+    Timer(Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => AuthWrapper()),
@@ -216,7 +217,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     }
   }
 
-
   Future<void> _fetchSplashData() async {
     try {
       final snapshot = await FirebaseFirestore.instance
@@ -257,18 +257,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         children: [
           // Centered Logo with animation
           Center(
-            child: AnimatedBuilder(
-              animation: _controller,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: 1 + (_controller.value * 0.1), // Slight pulsing effect
-                  child: Image.asset(
-                    'assets/logo.png', // Add your logo image in the assets folder
-                    height: 150, // Increased logo size
-                    width: 150,
-                  ),
-                );
-              },
+            child: Image.asset(
+              'assets/logo.png', // Add your logo image in the assets folder
+              height: 150, // Adjusted logo size
+              width: 150,
             ),
           ),
           // Align tagline and company name at bottom
@@ -284,10 +276,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     padding: const EdgeInsets.only(bottom: 8.0), // Adjust spacing between tagline and company name
                     child: Text(
                       tagline,
-                      style: TextStyle(
-                        fontSize: 20,
-                        color: Colors.black, // Black text on white background
-                        fontStyle: FontStyle.italic,
+                      style: GoogleFonts.alata(  // Use Google Font
+                        fontSize: 18,
+                        color: Colors.black,
                         fontWeight: FontWeight.w300,
                       ),
                       textAlign: TextAlign.center,
@@ -302,8 +293,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                       builder: (context, constraints) {
                         return Text(
                           companyName,
-                          style: TextStyle(
-                            fontSize: 24,
+                          style: GoogleFonts.alata(  // Use Google Font
+                            fontSize: 20,
                             color: Colors.black, // Black text on white background
                             fontWeight: FontWeight.bold,
                           ),

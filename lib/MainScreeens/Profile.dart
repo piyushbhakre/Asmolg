@@ -3,9 +3,9 @@ import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:quickalert/quickalert.dart'; // Import QuickAlert
 import 'package:intl/intl.dart'; // Import intl for date formatting
+import 'package:shimmer/shimmer.dart';
 import '../AptitudeTopicPage.dart';
 
 class ProfileApp extends StatefulWidget {
@@ -141,10 +141,6 @@ class _ProfileAppState extends State<ProfileApp> {
     }
   }
 
-
-
-
-
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     // After signing out, navigate to the login screen
@@ -156,7 +152,6 @@ class _ProfileAppState extends State<ProfileApp> {
     );
   }
 
-  // Method to show a sign-out confirmation dialog using QuickAlert
   void _showSignOutDialog(BuildContext context) {
     QuickAlert.show(
       context: context,
@@ -175,6 +170,7 @@ class _ProfileAppState extends State<ProfileApp> {
     );
   }
 
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -185,10 +181,44 @@ class _ProfileAppState extends State<ProfileApp> {
           child: Stack(
             children: [
               if (isLoading)
-                Center(
-                  child: LoadingAnimationWidget.staggeredDotsWave(
-                    color: Colors.blueAccent,
-                    size: 50,
+                Shimmer.fromColors(
+                  baseColor: Colors.grey[300]!,
+                  highlightColor: Colors.grey[100]!,
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Shimmer Effect for Profile Header
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(width: 150, height: 20, color: Colors.white),
+                                  SizedBox(height: 5),
+                                  Container(width: 200, height: 15, color: Colors.white),
+                                  SizedBox(height: 5),
+                                  Container(width: 120, height: 15, color: Colors.white),
+                                ],
+                              ),
+                              // Shimmer Effect for Three-dot Menu
+                              Container(width: 30, height: 30, color: Colors.white),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Shimmer Effect for Bought Courses Section
+                          Container(width: double.infinity, height: 45, color: Colors.white),
+                          const SizedBox(height: 10),
+
+                          // Shimmer Effect for Bought Courses List
+                          Container(height: 600, color: Colors.transparent),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               if (!isLoading)
@@ -217,18 +247,12 @@ class _ProfileAppState extends State<ProfileApp> {
                                 if (user != null)
                                   Text(
                                     user!.email ?? 'No Email',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey[600],
-                                    ),
+                                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                                   ),
                                 SizedBox(height: 5),
                                 Text(
                                   phone,
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
+                                  style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                                 ),
                               ],
                             ),
@@ -241,10 +265,7 @@ class _ProfileAppState extends State<ProfileApp> {
                               },
                               itemBuilder: (BuildContext context) {
                                 return [
-                                  PopupMenuItem<String>(
-                                    value: 'sign_out',
-                                    child: Text('Sign Out'),
-                                  ),
+                                  PopupMenuItem<String>(value: 'sign_out', child: Text('Sign Out')),
                                 ];
                               },
                               icon: Icon(Icons.more_vert), // Three-dot icon
@@ -311,6 +332,36 @@ class _ProfileAppState extends State<ProfileApp> {
 
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setState) {
+        // If data is loading, show shimmer effect for the list of cards
+        if (isLoading) {
+          return Shimmer.fromColors(
+            baseColor: Colors.grey[300]!, // Shimmer base color
+            highlightColor: Colors.grey[100]!, // Shimmer highlight color
+            child: ListView.builder(
+              itemCount: 5, // Display 5 shimmer cards while loading
+              itemBuilder: (context, index) {
+                return Container(
+                  margin: const EdgeInsets.symmetric(vertical: 8.0),
+                  height: 100,
+                  color: Colors.white,
+                  child: ListTile(
+                    leading: Container(width: 40, height: 40, color: Colors.white), // Shimmer for icon
+                    title: Container(width: 120, height: 16, color: Colors.white), // Shimmer for title
+                    subtitle: Column(
+                      children: [
+                        Container(width: 150, height: 12, color: Colors.white), // Shimmer for subtitle text
+                        SizedBox(height: 5),
+                        Container(width: 100, height: 12, color: Colors.white), // Shimmer for second subtitle
+                      ],
+                    ),
+                    trailing: Container(width: 30, height: 30, color: Colors.white), // Shimmer for trailing icon
+                  ),
+                );
+              },
+            ),
+          );
+        }
+
         // Filter the bought courses based on the search query
         List<Map<String, dynamic>> filteredCourses = boughtCourses
             .where((course) => course['content']!.toLowerCase().contains(searchQuery.toLowerCase()))
@@ -443,4 +494,5 @@ class _ProfileAppState extends State<ProfileApp> {
       },
     );
   }
+
 }

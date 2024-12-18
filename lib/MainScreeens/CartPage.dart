@@ -6,90 +6,102 @@ class CartPage extends StatelessWidget {
   const CartPage({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: const Text(
-          "Cart",
-          style: TextStyle(color: Colors.black),
+    Widget build(BuildContext context) {
+      return Scaffold(
+        backgroundColor: Colors.grey[50], // Light grey background
+        appBar: AppBar(
+          title: const Text(
+            "Cart",
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.black,
+          iconTheme: const IconThemeData(color: Colors.white),
+          elevation: 1,
         ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 1,
-      ),
-      body: ValueListenableBuilder<int>(
-        valueListenable: cartNotifier,
-        builder: (context, cartCount, child) {
-          if (cartCount == 0) {
-            return const Center(
-              child: Text(
-                "Your cart is empty 🛒",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            );
-          }
-
-          return Column(
-            children: [
-              Expanded(
-                child: ListView.builder(
-                  itemCount: cartNotifier.value,
-                  itemBuilder: (context, index) {
-                    final item = cartNotifier.cartItems.elementAt(index);
-                    return CartCard(
-                      subjectId: item['subjectId']!,  // Passing the subjectId
-                      subjectName: item['subjectName']!,
-                      departmentName: item['departmentName']!,
-                      price: item['price']!,
-                    );
-                  },
+        body: ValueListenableBuilder<int>(
+          valueListenable: cartNotifier,
+          builder: (context, cartCount, child) {
+            if (cartCount == 0) {
+              return const Center(
+                child: Text(
+                  "Your cart is empty 🛒",
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black54),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: ElevatedButton(
-                  onPressed: () {
-                    // Pass the cart items (with subjectId) to the BillingPage
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => BillingPage(
-                          items: cartNotifier.cartItems.map((item) {
-                            return {
-                              'subjectId': item['subjectId']!,
-                              'subjectName': item['subjectName']!,
-                              'departmentName': item['departmentName']!,
-                              'price': item['price']!,
-                            };
-                          }).toList(),
+              );
+            }
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Cart items list
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 80), // Avoid overlap with button
+                    itemCount: cartCount,
+                    itemBuilder: (context, index) {
+                      final item = cartNotifier.cartItems.elementAt(index);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16),
+                        child: CartCard(
+                          subjectId: item['subjectId']!,
+                          subjectName: item['subjectName']!,
+                          departmentName: item['departmentName']!,
+                          price: item['price']!,
                         ),
+                      );
+                    },
+                  ),
+                ),
+
+                // Checkout Button
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: double.infinity, // Makes the button take the full width of the parent
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // Pass the cart items (with subjectId) to the BillingPage
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => BillingPage(
+                              items: cartNotifier.cartItems.map((item) {
+                                return {
+                                  'subjectId': item['subjectId']!,
+                                  'subjectName': item['subjectName']!,
+                                  'departmentName': item['departmentName']!,
+                                  'price': item['price']!,
+                                };
+                              }).toList(),
+                            ),
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16), // Removed horizontal padding
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 5,
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 15),
-                    backgroundColor: Colors.black,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      child: const Text(
+                        "Proceed to Checkout",
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
                     ),
                   ),
-                  child: const Text(
-                    "Proceed to Checkout",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
                 ),
-              ),
-              const SizedBox(height: 20),
-            ],
-          );
-        },
-      ),
-    );
+                const SizedBox(height: 20),
+              ],
+            );
+          },
+        ),
+      );
+    }
   }
-}
-
 class CartCard extends StatelessWidget {
   final String subjectId;
   final String subjectName;
@@ -106,55 +118,74 @@ class CartCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            subjectName,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text("Department: $departmentName"),
-          const SizedBox(height: 8),
-          Text("Price: $price"),
-          const SizedBox(height: 8),
-          Text("Subject ID: $subjectId"), // Display subjectId
-          const SizedBox(height: 16),
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton(
-              onPressed: () {
-                // Remove item based on subjectId
-                cartNotifier.removeItemById(subjectId);
-                print("Removed item with Subject ID: $subjectId");
-              },
-              style: OutlinedButton.styleFrom(
-                backgroundColor: Colors.white,
-                side: const BorderSide(color: Colors.black, width: 1),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          color: Colors.white, // Solid background color
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                subjectName,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
                 ),
               ),
-              child: const Text(
-                "Remove",
-                style: TextStyle(color: Colors.black),
+              const SizedBox(height: 8),
+              Text(
+                "Department: $departmentName",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black54,
+                ),
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                "Price: $price",
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: OutlinedButton(
+                  onPressed: () {
+                    // Remove item based on subjectId
+                    cartNotifier.removeItemById(subjectId);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Removed item: $subjectName"),
+                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    side: const BorderSide(color: Colors.black, width: 1),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: const Text(
+                    "Remove",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+        Divider(
+          height: 1,
+          color: Colors.grey.shade500, // Divider color
+        ),
+      ],
     );
   }
 }
+
 
 

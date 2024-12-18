@@ -1,11 +1,15 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:cherry_toast/resources/arrays.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -67,13 +71,17 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
           isLoadingGST = false;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch GST rate.")),
+        Fluttertoast.showToast(
+          msg: "Failed to fetch GST rate.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching GST: $e")),
+      Fluttertoast.showToast(
+        msg: "Error fetching GST: $e",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
       );
       setState(() {
         isLoadingGST = false;
@@ -83,11 +91,14 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
 
   Future<void> _applyCoupon() async {
     final enteredCode = _couponController.text.trim();
-
     if (enteredCode.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a coupon code.")),
-      );
+      CherryToast.info(
+        title: const Text("Info"),
+        description: const Text("Please enter a coupon code."),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
       return;
     }
 
@@ -96,10 +107,7 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     });
 
     try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('Miscellaneous')
-          .get();
-
+      final snapshot = await FirebaseFirestore.instance.collection('Miscellaneous').get();
       bool isValidCoupon = false;
 
       for (var doc in snapshot.docs) {
@@ -111,13 +119,13 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
           });
           isValidCoupon = true;
 
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off.",
-              ),
-            ),
-          );
+          CherryToast.success(
+            title: const Text("Success"),
+            description: Text("Coupon applied! ${discountPercentage.toStringAsFixed(0)}% off."),
+            toastPosition: Position.top,
+            animationType: AnimationType.fromTop,
+            autoDismiss: true,
+          ).show(context);
           break;
         }
       }
@@ -128,16 +136,24 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
           appliedCoupon = "";
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Invalid coupon code.")),
-        );
+        CherryToast.error(
+          title: const Text("Invalid Coupon"),
+          description: const Text("Invalid coupon code."),
+          toastPosition: Position.top,
+          animationType: AnimationType.fromTop,
+          autoDismiss: true,
+        ).show(context);
       } else {
         _couponController.clear();
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error applying coupon: $e")),
-      );
+      CherryToast.error(
+        title: const Text("Error"),
+        description: Text("Error applying coupon: $e"),
+        toastPosition: Position.top,
+        animationType: AnimationType.fromTop,
+        autoDismiss: true,
+      ).show(context);
     } finally {
       setState(() {
         isApplyingCoupon = false;
@@ -169,36 +185,55 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
       _isProcessingPayment = true;
     });
 
-    final orderId = await _fetchOrderId(total);
-    if (orderId.isEmpty) {
-      setState(() {
-        _isProcessingPayment = false;
-      });
-      return;
-    }
-
-    final User? user = FirebaseAuth.instance.currentUser;
-    final String email = user?.email ?? '';
-    final String phone = '1234567890'; // Replace with actual logic to fetch user phone
-
-    var options = {
-      'key': 'rzp_live_ibSut8YutP655P',
-      'amount': (total * 100).toInt(),
-      'order_id': orderId,
-      'prefill': {'email': email, 'contact': phone},
-      'theme': {'color': '#F37254'},
-    };
-
     try {
+      // Fetch the order ID from the backend or Razorpay API
+      final orderId = await _fetchOrderId(total);
+
+      if (orderId.isEmpty) {
+        setState(() {
+          _isProcessingPayment = false;
+        });
+
+        CherryToast.error(
+          title: const Text("Payment Initialization Failed"),
+          description: const Text("Unable to fetch order ID. Please try again later."),
+          animationType: AnimationType.fromTop,
+          toastPosition: Position.top,
+          autoDismiss: true,
+        ).show(context);
+        return;
+      }
+
+      // Fetch user details
+      final User? user = FirebaseAuth.instance.currentUser;
+      final String email = user?.email ?? '';
+      final String phone = '1234567890'; // Replace with actual logic to fetch user phone
+
+      // Razorpay options
+      var options = {
+        'key': RAZOR_PAY_LIVE_KEY,
+        'amount': (total * 100).toInt(),
+        'order_id': orderId,
+        'prefill': {'email': email, 'contact': phone},
+        'theme': {'color': '#F37254'},
+      };
+
       _razorpay.open(options);
     } catch (e) {
       setState(() {
         _isProcessingPayment = false;
       });
+
+      // Show CherryToast for unexpected errors
+      CherryToast.error(
+        title: const Text("Payment Error"),
+        description: Text("An unexpected error occurred: $e"),
+        animationType: AnimationType.fromTop,
+        toastPosition: Position.top,
+        autoDismiss: true,
+      ).show(context);
     }
   }
-
-
 
   Future<String> _getUserMobileNumber(String email) async {
     DocumentSnapshot userDoc = await FirebaseFirestore.instance.collection(
@@ -276,9 +311,33 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     setState(() {
       _isProcessingPayment = false;
     });
+
+
+    // Show CherryToast for payment error
+    CherryToast.error(
+      title: const Text("Payment Failed"),
+      description: Text(
+        response.message ?? "An unknown error occurred during the payment.",
+      ),
+      animationType: AnimationType.fromTop,
+      toastPosition: Position.top,
+      autoDismiss: true,
+    ).show(context);
   }
 
-  void _handleExternalWallet(ExternalWalletResponse response) {}
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    // Log for debugging
+    print("External Wallet Selected: ${response.walletName}");
+
+    // Show CherryToast for external wallet selection
+    CherryToast.info(
+      title: const Text("External Wallet"),
+      description: Text("You selected: ${response.walletName}"),
+      animationType: AnimationType.fromTop,
+      toastPosition: Position.top,
+      autoDismiss: true,
+    ).show(context);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -288,78 +347,203 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     double total = subtotal + gst - discount;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Billing", style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.black),
-        elevation: 1,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.items.length,
-                itemBuilder: (context, index) {
-                  final item = widget.items[index];
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    elevation: 4.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+      body: Stack(
+        children: [
+          // The main content, with the blur effect on the background
+          Positioned.fill(
+            child: Column(
+              children: [
+                // AppBar will be inside the Stack to get blurred
+                AppBar(
+                  title: const Text("Billing", style: TextStyle(color: Colors.white)),
+                  backgroundColor: Colors.black,
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  elevation: 1,
+                ),
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Subject: ${item['subjectName']}", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          Text("Department: ${item['departmentName']}"),
-                          const SizedBox(height: 4),
-                          Text("Subject ID: ${item['subjectId']}", style: const TextStyle(color: Colors.grey)),
-                          const SizedBox(height: 4),
-                          Text("Price: ₹ ${item['price']}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: widget.items.length,
+                              itemBuilder: (context, index) {
+                                final item = widget.items[index];
+                                return Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16.0),
+                                      color: Colors.white,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "${item['subjectName']}",
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Department: ${item['departmentName']}",
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.black54,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Price: ₹ ${item['price']}",
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Divider(
+                                      height: 1,
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                          const Divider(thickness: 1, color: Colors.black),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildSubtotalRow(
+                            "Subtotal", subtotal,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildSubtotalRow(
+                            "GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          if (discount > 0)
+                            _buildSubtotalRow(
+                              "Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})",
+                              -discount,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.normal,
+                                color: Colors.green,
+                                shadows: [
+                                  Shadow(
+                                    blurRadius: 8.0,
+                                    color: Colors.green,
+                                    offset: Offset(0, 0),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          const SizedBox(height: 16),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildTotalRow(
+                            "Total", total,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          _buildCouponRow(
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.blueAccent,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => _openCheckout(total),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                              child: const Text(
+                                "Pay Now",
+                                style: TextStyle(color: Colors.white, fontSize: 16),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                ),
+              ],
             ),
-            const Divider(thickness: 1),
-            isLoadingGST
-                ? _shimmerLoadingPlaceholder()
-                : _buildSubtotalRow("Subtotal", subtotal),
-            isLoadingGST
-                ? _shimmerLoadingPlaceholder()
-                : _buildSubtotalRow("GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst),
-            if (discount > 0)
-              _buildSubtotalRow("Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})", -discount, isDiscount: true),
-            const SizedBox(height: 16),
-            isLoadingGST ? _shimmerLoadingPlaceholder() : _buildTotalRow("Total", total),
-            const SizedBox(height: 16),
-            _buildCouponRow(),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isProcessingPayment ? null : () => _openCheckout(total),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                backgroundColor: Colors.black,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+          ),
+          if (_isProcessingPayment)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: Center(
+                    child: Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 8,
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LoadingAnimationWidget.staggeredDotsWave(
+                              color: Colors.black,
+                              size: 50,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              "Ready for payment...",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
               ),
-              child: _isProcessingPayment
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text("Pay Now", style: TextStyle(color: Colors.white, fontSize: 16)),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
+
 
   Widget _shimmerLoadingPlaceholder() {
     return Shimmer.fromColors(
@@ -373,20 +557,24 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     );
   }
 
-  Widget _buildSubtotalRow(String title, double value, {bool isDiscount = false}) {
+  Widget _buildSubtotalRow(String title, double value, {bool isDiscount = false, required TextStyle style}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16)),
+        Text(title, style: style),
         Text(
           (isDiscount ? "- " : "") + "₹ ${value.toStringAsFixed(2)}",
-          style: TextStyle(fontSize: 16, color: isDiscount ? Colors.green : Colors.black),
+          style: TextStyle(
+            fontSize: 16,
+            color: isDiscount ? Colors.green : Colors.black,  // Ensure discount text is green
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildTotalRow(String title, double value) {
+
+  Widget _buildTotalRow(String title, double value, {required TextStyle style}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -396,7 +584,7 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     );
   }
 
-  Widget _buildCouponRow() {
+  Widget _buildCouponRow({required TextStyle style}) {
     return Row(
       children: [
         Expanded(

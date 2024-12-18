@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:shimmer/shimmer.dart';
 import '../StateManager/CartState.dart';
 import 'CartPage.dart';
 
@@ -242,7 +243,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                           },
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 16),
-                            backgroundColor: Colors.blue,
+                            backgroundColor: Colors.black,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
@@ -318,8 +319,28 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                     future: _fetchPDFFiles(),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
+                        // Display shimmer effect while loading
+                        return ListView.builder(
+                          itemCount: 7, // Simulate 5 shimmer placeholders
+                          itemBuilder: (context, index) {
+                            return Shimmer.fromColors(
+                              baseColor: Colors.grey[300]!,
+                              highlightColor: Colors.grey[100]!,
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(16.0),
+                                width: double.infinity,
+                                height: 80, // Adjust height as needed
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                              ),
+                            );
+                          },
+                        );
                       }
+
                       if (snapshot.hasError) {
                         CherryToast.error(
                           title: const Text('Error'),
@@ -331,7 +352,10 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
                       }
 
                       if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+                        // Sort the PDF files: Free (isPaid == false) content first
                         List<Map<String, dynamic>> pdfFiles = snapshot.data!;
+                        pdfFiles.sort((a, b) => a['isPaid'] ? 1 : -1); // Free content (isPaid == false) comes first
+
                         return ListView.builder(
                           itemCount: pdfFiles.length,
                           itemBuilder: (context, index) {
@@ -376,7 +400,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
   }
 }
 
-// PDFCard Widget remains unchanged
+
 class PDFCard extends StatelessWidget {
   final String title;
   final String fileURL;
@@ -391,45 +415,90 @@ class PDFCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isPaid ? Icons.lock : Icons.lock_open,
-            color: isPaid ? Colors.redAccent : Colors.green,
-            size: 40,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+    return Column(
+      children: [
+        GestureDetector(
+          onTap: isPaid
+              ? null
+              : () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FileViewerPage(fileUrl: fileURL),
               ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(16.0),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // Circular icon with background
+                Container(
+                  height: 50,
+                  width: 50,
+                  decoration: BoxDecoration(
+                    color: isPaid ? Colors.red[100] : Colors.green[100],
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isPaid ? Icons.lock : Icons.lock_open,
+                    color: isPaid ? Colors.red : Colors.green,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Title and subtitle
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        isPaid ? 'Premium Access' : 'Free Access',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Open button
+                Icon(
+                  Icons.open_in_new,
+                  color: isPaid ? Colors.grey : Colors.blue,
+                  size: 24,
+                ),
+              ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.open_in_new),
-            onPressed: isPaid
-                ? null
-                : () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => FileViewerPage(fileUrl: fileURL),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+        ),
+        // Divider
+        const Divider(
+          color: Colors.grey,
+          thickness: 1,
+          height: 1,
+        ),
+      ],
     );
   }
 }
+

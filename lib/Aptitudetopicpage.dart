@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:shimmer/shimmer.dart';
 import 'fileViewer.dart'; // PDF Viewer
 
 class AptitudeTopicPage extends StatefulWidget {
@@ -72,83 +73,133 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
             ),
             const SizedBox(height: 16),
             // Topics FutureBuilder
-            Expanded(
-              child: FutureBuilder<QuerySnapshot>(
-                future: getAptitudeTopics(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+        Expanded(
+          child: FutureBuilder<QuerySnapshot>(
+            future: getAptitudeTopics(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildShimmerList(); // Display shimmer while loading
+              }
 
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
+              if (snapshot.hasError) {
+                return Center(child: Text('Error: ${snapshot.error}'));
+              }
 
-                  if (snapshot.hasData && snapshot.data != null) {
-                    var topicsDocs = snapshot.data!.docs;
+              if (snapshot.hasData && snapshot.data != null) {
+                var topicsDocs = snapshot.data!.docs;
 
-                    if (topicsDocs.isEmpty) {
-                      return const Center(child: Text('No topics found.'));
-                    }
-
-                    // Fetch topic_name, fileUrl, and formatted uploadedDate for each topic
-                    final topics = topicsDocs.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-
-                      // Format ISO string to `dd-MM-yyyy`
-                      String formattedDate = '';
-                      if (data['uploadedDate'] != null &&
-                          data['uploadedDate'] is String) {
-                        DateTime dateTime =
-                            DateTime.parse(data['uploadedDate']);
-                        formattedDate =
-                            "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
-                      } else {
-                        formattedDate = 'Unknown Date';
-                      }
-
-                      return {
-                        'topic_name': data['topic_name'] ?? 'Unknown Topic',
-                        'fileUrl': data['fileUrl'] ?? '',
-                        // Fetch the fileUrl field
-                        'uploadedDate': formattedDate,
-                        // Use the formatted date
-                      };
-                    }).where((topic) {
-                      // Filter topics based on the search term
-                      return topic['topic_name']
-                          .toLowerCase()
-                          .contains(_searchTerm);
-                    }).toList();
-
-                    if (topics.isEmpty) {
-                      return const Center(
-                          child: Text('No topics match your search.'));
-                    }
-
-                    return ListView.builder(
-                      itemCount: topics.length,
-                      itemBuilder: (context, index) {
-                        final topic = topics[index];
-                        return AptitudeTopicCard(
-                          topicName: topic['topic_name'],
-                          fileUrl: topic['fileUrl'], // Pass the fileUrl
-                          uploadedDate:
-                              topic['uploadedDate'], // Pass the formatted date
-                        );
-                      },
-                    );
-                  }
-
+                if (topicsDocs.isEmpty) {
                   return const Center(child: Text('No topics found.'));
-                },
-              ),
-            ),
+                }
+
+                // Fetch topic_name, fileUrl, and formatted uploadedDate for each topic
+                final topics = topicsDocs.map((doc) {
+                  final data = doc.data() as Map<String, dynamic>;
+
+                  // Format ISO string to `dd-MM-yyyy`
+                  String formattedDate = '';
+                  if (data['uploadedDate'] != null && data['uploadedDate'] is String) {
+                    DateTime dateTime = DateTime.parse(data['uploadedDate']);
+                    formattedDate =
+                    "${dateTime.day.toString().padLeft(2, '0')}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.year}";
+                  } else {
+                    formattedDate = 'Unknown Date';
+                  }
+
+                  return {
+                    'topic_name': data['topic_name'] ?? 'Unknown Topic',
+                    'fileUrl': data['fileUrl'] ?? '',
+                    'uploadedDate': formattedDate,
+                  };
+                }).where((topic) {
+                  // Filter topics based on the search term
+                  return topic['topic_name'].toLowerCase().contains(_searchTerm);
+                }).toList();
+
+                if (topics.isEmpty) {
+                  return const Center(child: Text('No topics match your search.'));
+                }
+
+                return ListView.builder(
+                  itemCount: topics.length,
+                  itemBuilder: (context, index) {
+                    final topic = topics[index];
+                    return AptitudeTopicCard(
+                      topicName: topic['topic_name'],
+                      fileUrl: topic['fileUrl'],
+                      uploadedDate: topic['uploadedDate'],
+                    );
+                  },
+                );
+              }
+
+              return const Center(child: Text('No topics found.'));
+            },
+          ),
+        )
           ],
         ),
       ),
     );
   }
+}
+
+// Shimmer Placeholder
+Widget _buildShimmerList() {
+  return ListView.builder(
+    itemCount: 8, // Number of shimmer placeholders
+    itemBuilder: (context, index) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+        child: Shimmer.fromColors(
+          baseColor: Colors.grey.shade300,
+          highlightColor: Colors.grey.shade100,
+          child: Container(
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8.0),
+            ),
+            child: Row(
+              children: [
+                // Placeholder for the left-aligned icon
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                const SizedBox(width: 16),
+
+                // Placeholder for text
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        height: 15,
+                        width: double.infinity,
+                        color: Colors.grey.shade300,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        height: 12,
+                        width: 150,
+                        color: Colors.grey.shade300,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    },
+  );
 }
 
 class AptitudeTopicCard extends StatelessWidget {
@@ -182,61 +233,58 @@ class AptitudeTopicCard extends StatelessWidget {
           );
         }
       },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16.0), // Space between cards
-        padding: const EdgeInsets.all(16.0),
-        decoration: BoxDecoration(
-          color: Colors.white, // No gradient, just a solid background
-          borderRadius: BorderRadius.circular(12), // Rounded corners
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.3),
-              blurRadius: 8,
-              spreadRadius: 2,
-              offset: const Offset(0, 3), // Shadow for depth effect
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left-aligned icon based on content type
-            FaIcon(
-              FontAwesomeIcons.filePdf, // Icon for the topic
-              color: Colors.blue, // Use blue color for the icon
-              size: 25, // Larger size for better visibility
-            ),
-            const SizedBox(width: 16), // Space between icon and text
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Colors.white, // Solid background color
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Left-aligned icon based on content type
+                FaIcon(
+                  FontAwesomeIcons.filePdf, // Icon for the topic
+                  color: Colors.blue, // Use blue color for the icon
+                  size: 25, // Larger size for better visibility
+                ),
+                const SizedBox(width: 16), // Space between icon and text
 
-            // Topic Name Column
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    topicName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
+                // Topic Name Column
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        topicName,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // Space between name and extra information
+                      Text(
+                        'Uploaded: $uploadedDate', // Display the formatted date
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  // Space between name and extra information
-                  Text(
-                    'Uploaded: $uploadedDate', // Display the formatted date
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+          Divider(
+            height: 2,
+            color: Colors.grey.shade500, // Divider line color
+          ),
+        ],
       ),
     );
   }
 }
+

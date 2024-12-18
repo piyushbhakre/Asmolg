@@ -3,9 +3,12 @@ import 'package:asmolg/StateManager/CartState.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:marquee/marquee.dart';
 import 'package:screen_protector/screen_protector.dart';
+import '../Provider/UserController.dart';
 import '../SeeAllPage.dart';
 import '../aptitude_card.dart';
 import '../department_card.dart';
@@ -41,6 +44,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     fetchDepartments();
     fetchAptitudeCourses();
     fetchCarouselAds();
+    Get.put(UserController());
 
   }
 
@@ -117,9 +121,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-
-
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -130,7 +131,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             elevation: 0,
             backgroundColor: Colors.white,
             title: const Text(
-              'Home',
+              'ASMOLG',
               style: TextStyle(
                 color: Colors.black,
                 fontWeight: FontWeight.bold,
@@ -178,7 +179,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),SizedBox(width: 10)
             ],
           ),
-
           body: GestureDetector(
             onTap: () {
               FocusScope.of(context).unfocus();
@@ -268,8 +268,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       }).toList(),
                     ),
                   ),
-
-
                   // Departments Section
                   _buildSectionHeader(
                     title: 'Engineering',
@@ -299,8 +297,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     );
                   }),
-
-// Aptitude Courses Section
                   _buildSectionHeader(
                     title: 'Placement Material',
                     icon: Icons.lightbulb,
@@ -329,7 +325,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     );
                   }),
-
                   const SizedBox(height: 80),
                 ],
               ),
@@ -349,7 +344,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
-
   Padding _buildSectionHeader(
       {required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
     return Padding(

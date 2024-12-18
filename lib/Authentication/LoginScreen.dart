@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:cherry_toast/cherry_toast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../MainScreeens/homepage.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -46,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
-    // Validate email and password fields
     setState(() {
       _emailError = _emailController.text.isEmpty ? "Please fill in the email" : null;
       _passwordError = _passwordController.text.isEmpty ? "Please fill in the password" : null;
@@ -59,34 +59,37 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Sign in with Email and password
+      // Perform sign-in using Firebase Authentication
       await _auth.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Show CherryToast after successful login
+      // Save email to SharedPreferences (override existing email if present)
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String userEmail = _emailController.text.trim();
+      await prefs.setString('userEmail', userEmail);
+
+
+      // Show success message
       CherryToast.success(
         title: Text("Login Successful 🎉"),
         description: Text("Enjoy our services 😃"),
         animationDuration: Duration(milliseconds: 500),
       ).show(context);
 
-      // Navigate to home screen
+      // Navigate to the home screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => HomeScreen()),
             (Route<dynamic> route) => false,
       );
-
     } catch (e) {
-      // Catch Firebase Auth errors
       String errorMessage = 'Login failed. Please try again';
-
       if (e is FirebaseAuthException) {
         errorMessage = _handleFirebaseError(e.code);
       }
 
-      // Show CherryToast with user-friendly error message
+      // Show error message
       CherryToast.error(
         title: Text("Login Error"),
         description: Text(errorMessage),
@@ -98,6 +101,8 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     }
   }
+
+
 
   Future<void> _resetPassword(String email) async {
     try {

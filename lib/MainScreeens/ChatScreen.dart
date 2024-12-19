@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Provider/UserController.dart';
@@ -18,6 +19,7 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final UserController userController = Get.find<UserController>();
+  final FocusNode _focusNode = FocusNode();
 
   bool _isSending = false;
   final Set<int> _selectedMessages = {};
@@ -167,17 +169,22 @@ class _ChatScreenState extends State<ChatScreen> {
           _isSelectionMode = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Selected messages deleted successfully.",
-              style: TextStyle(color: Colors.white)),
-            backgroundColor: Colors.green),
+        Fluttertoast.showToast(
+          msg: "Selected messages deleted successfully.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM, // Position of the toast
+          backgroundColor: Colors.green,
+          textColor: Colors.white,
+          fontSize: 14.0,
         );
       } catch (e) {
-        print("Error deleting messages: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to delete the selected messages.",
-          style: TextStyle(color: Colors.white)),
-              backgroundColor: Colors.green),
+        Fluttertoast.showToast(
+          msg: "Failed to delete the selected messages.",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM, // Position of the toast
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 14.0,
         );
       }
     }
@@ -189,9 +196,26 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text(widget.subjectName),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.white38,
+        elevation: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.subjectName,
+              style: const TextStyle(color: Colors.black, fontSize: 18),
+            ),
+            Obx(() {
+              return Text(
+                '${userController.fullName.value}',
+                style: const TextStyle(color: Colors.black, fontSize: 14),
+              );
+            }),
+          ],
+        ),
+        iconTheme: const IconThemeData(color: Colors.black),
         actions: _isSelectionMode
             ? [
           IconButton(
@@ -210,26 +234,29 @@ class _ChatScreenState extends State<ChatScreen> {
                   .doc(widget.subjectId)
                   .snapshots(),
               builder: (context, snapshot) {
-                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
                 final data = snapshot.data?.data() as Map<String, dynamic>? ?? {};
                 final messages = List.from(data['messages'] ?? []);
 
-                messages.sort((a, b) => (a['timestamp'] as int).compareTo(b['timestamp'] as int));
-
-                String? lastDate;
+                messages.sort((a, b) =>
+                    (a['timestamp'] as int).compareTo(b['timestamp'] as int));
 
                 return ListView.builder(
                   controller: _scrollController,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final bool isSelected = _selectedMessages.contains(index);
-                    final bool isCurrentUser = message['email'] == FirebaseAuth.instance.currentUser?.email;
+                    final bool isCurrentUser = message['email'] ==
+                        FirebaseAuth.instance.currentUser?.email;
 
                     // Show date divider if the current message's date is different from the previous one
-                    final showDateDivider = index == 0 || messages[index]['date'] != messages[index - 1]['date'];
-                    final formattedDateDivider = _formatDateDivider(message['date']); // Convert to DD-MMM
+                    final showDateDivider = index == 0 ||
+                        messages[index]['date'] != messages[index - 1]['date'];
+                    final formattedDateDivider =
+                    _formatDateDivider(message['date']); // Convert to DD-MMM
 
                     return Column(
                       children: [
@@ -238,7 +265,8 @@ class _ChatScreenState extends State<ChatScreen> {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Center(
                               child: Container(
-                                padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 4, horizontal: 12),
                                 decoration: BoxDecoration(
                                   color: Colors.grey.shade300,
                                   borderRadius: BorderRadius.circular(12),
@@ -260,33 +288,86 @@ class _ChatScreenState extends State<ChatScreen> {
                             alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
                             child: Container(
                               margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                               decoration: BoxDecoration(
-                                color: isCurrentUser ? Colors.green : Colors.grey.shade300,
-                                borderRadius: BorderRadius.circular(8),
-                                border: isSelected
-                                    ? Border.all(color: Colors.blueAccent, width: 2)
-                                    : null,
+                                color: isCurrentUser ? Colors.lightBlue.shade100 : Colors.white,
+                                borderRadius: BorderRadius.only(
+                                  topLeft: const Radius.circular(8),
+                                  topRight: const Radius.circular(8),
+                                  bottomLeft: isCurrentUser ? const Radius.circular(8) : const Radius.circular(0),
+                                  bottomRight: isCurrentUser ? const Radius.circular(0) : const Radius.circular(8),
+                                ),
+                                border: Border.all(color: Colors.grey.shade300, width: 1),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    message['message'],
-                                    style: TextStyle(
-                                      color: isCurrentUser ? Colors.white : Colors.black,
-                                      fontSize: 16,
-                                    ),
+                              child: IntrinsicWidth(
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: MediaQuery.of(context).size.width * 0.75, // Max 75% of screen width
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    message['time'],
-                                    style: TextStyle(
-                                      color: isCurrentUser ? Colors.white70 : Colors.black54,
-                                      fontSize: 12,
-                                    ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      // Top Row with Sender Name and Tick/Circle
+                                      Row(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          if (_isSelectionMode && isCurrentUser)
+                                            Container(
+                                              width: 16, // Small size for the circle
+                                              height: 16,
+                                              margin: const EdgeInsets.only(right: 8),
+                                              decoration: BoxDecoration(
+                                                shape: BoxShape.circle,
+                                                color: _selectedMessages.contains(index)
+                                                    ? Colors.green // Show green circle for selected messages
+                                                    : Colors.transparent, // Transparent for unselected messages
+                                                border: Border.all(
+                                                  color: _selectedMessages.contains(index)
+                                                      ? Colors.green // Green border for selected messages
+                                                      : Colors.grey, // Grey border for unselected messages
+                                                  width: 1.5,
+                                                ),
+                                              ),
+                                              child: _selectedMessages.contains(index)
+                                                  ? const Icon(Icons.check, color: Colors.white, size: 10) // Green tick for selected
+                                                  : null, // No content for unselected
+                                            ),
+                                          Expanded(
+                                            child: Text(
+                                              isCurrentUser ? "You" : message['sender'], // "You" for current user, sender name for others
+                                              style: const TextStyle(
+                                                color: Colors.black54,
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 1), // Space between sender name and message text
+                                      // Message Text
+                                      Text(
+                                        message['message'],
+                                        style: const TextStyle(
+                                          color: Colors.black87,
+                                          fontSize: 16,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      // Timestamp
+                                      Align(
+                                        alignment: Alignment.bottomRight,
+                                        child: Text(
+                                          message['time'],
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ],
+                                ),
                               ),
                             ),
                           ),
@@ -305,31 +386,45 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
-                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.white, // White background for the text field
+                      borderRadius: BorderRadius.circular(0), // Rounded edges
+                      border: Border.all(color: Colors.grey.shade300, width: 1), // Light grey border
                     ),
-                    child: TextField(
-                      controller: _controller,
-                      decoration: const InputDecoration(
-                        hintText: 'Type your message...',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                      ),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 8), // Left padding inside the input box
+                        Expanded(
+                          child: TextField(
+                            focusNode: _focusNode,
+                            controller: _controller,
+                            decoration: const InputDecoration(
+                              hintText: 'Type your message...', // Match the hint text
+                              border: InputBorder.none,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                _isSending
-                    ? const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: CircularProgressIndicator(),
-                )
-                    : IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blueAccent),
-                  onPressed: _sendMessage,
+                const SizedBox(width: 8), // Space between input box and send button
+                CircleAvatar(
+                  radius: 24, // Circular button
+                  backgroundColor: Colors.blueAccent, // Match the grey send button background
+                  child: _isSending
+                      ? const CircularProgressIndicator(
+                    color: Colors.grey,
+                    strokeWidth: 2,
+                  )
+                      : IconButton(
+                    icon: const Icon(Icons.send, color: Colors.white), // Grey send icon
+                    onPressed: _sendMessage,
+                  ),
                 ),
               ],
             ),
           ),
+          SizedBox(height: 20)
         ],
       ),
     );

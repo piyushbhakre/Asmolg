@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:asmolg/Authentication/SplashScreen.dart';
+import 'package:asmolg/Provider/DevelopermodeDectector.dart';
 import 'package:asmolg/Provider/UserController.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,6 +12,7 @@ const String deleteExpiredSubjectsTask = "deleteExpiredSubjects";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Get.put(DeveloperModeDetection());
   await Firebase.initializeApp();
   Get.put(UserController());
 

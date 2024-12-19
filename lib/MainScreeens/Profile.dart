@@ -3,10 +3,12 @@ import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:get/get.dart';
 import 'package:quickalert/quickalert.dart'; // Import QuickAlert
 import 'package:intl/intl.dart'; // Import intl for date formatting
 import 'package:shimmer/shimmer.dart';
 import '../AptitudeTopicPage.dart';
+import '../Provider/expired_subjects_controller.dart';
 
 class ProfileApp extends StatefulWidget {
   @override
@@ -15,6 +17,7 @@ class ProfileApp extends StatefulWidget {
 
 class _ProfileAppState extends State<ProfileApp> {
   final User? user = FirebaseAuth.instance.currentUser; // Fetch current logged-in user
+  final ExpiredSubjectsController expiredSubjectsController = Get.find();
   String phone = ''; // Placeholder for phone number
   String fullName = ''; // Placeholder for full name
   bool isLoading = true; // Loading state
@@ -104,7 +107,7 @@ class _ProfileAppState extends State<ProfileApp> {
                 expiryDate = purchaseDate.add(Duration(days: globalExpiryDays));
                 // Adjusted expiry check
                 if (isExpired(purchaseDate, globalExpiryDays)) {
-                  _deleteExpiredSubject(item); // Make sure 'item' is the exact map from the array
+                  expiredSubjectsController.deleteExpiredSubjects();
                 }
 
               }
@@ -127,19 +130,6 @@ class _ProfileAppState extends State<ProfileApp> {
     }
   }
 
-
-  Future<void> _deleteExpiredSubject(Map<String, dynamic> subject) async {
-    if (user != null && subject['subject_id'] != null) {
-      try {
-        await FirebaseFirestore.instance.collection('users').doc(user!.email).update({
-          'bought_content': FieldValue.arrayRemove([subject])
-        });
-        print("Expired subject deleted: ${subject['subject_id']}");
-      } catch (e) {
-        print("Error deleting expired subject: $e");
-      }
-    }
-  }
 
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();

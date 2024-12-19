@@ -3,12 +3,8 @@ import 'package:asmolg/StateManager/CartState.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:marquee/marquee.dart';
-import 'package:screen_protector/screen_protector.dart';
-import '../Provider/UserController.dart';
+import 'package:shimmer/shimmer.dart';
 import '../SeeAllPage.dart';
 import '../aptitude_card.dart';
 import '../department_card.dart';
@@ -40,12 +36,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    ScreenProtector.preventScreenshotOn();
     fetchDepartments();
     fetchAptitudeCourses();
     fetchCarouselAds();
-    Get.put(UserController());
-
   }
 
   Future<void> fetchDepartments() async {
@@ -123,227 +116,252 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Scaffold(
-          backgroundColor: Colors.white,
-          appBar: AppBar(
-            elevation: 0,
-            backgroundColor: Colors.white,
-            title: const Text(
-              'ASMOLG',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            actions: [
-              Padding(
-                padding: const EdgeInsets.only(right: 16.0),
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const CartPage()),
-                    );
-                  },
-                  child: Stack(
-                    alignment: Alignment.topRight,
-                    children: [
-                      const Icon(Icons.shopping_cart, color: Colors.black),
-                      ValueListenableBuilder<int>(
-                        valueListenable: cartNotifier,
-                        builder: (context, cartCount, child) {
-                          return cartCount > 0
-                              ? Container(
-                            padding: const EdgeInsets.all(5),
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.red,
-                            ),
-                            child: Text(
-                              '$cartCount',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                              : const SizedBox.shrink();
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ),SizedBox(width: 10)
-            ],
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: const Text(
+          'ASMOLG',
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
           ),
-          body: GestureDetector(
-            onTap: () {
-              FocusScope.of(context).unfocus();
-            },
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CartPage()),
+                );
+              },
+              child: Stack(
+                alignment: Alignment.topRight,
                 children: [
-                  // Sale Title with Marquee Animation
-                  StreamBuilder<DocumentSnapshot>(
-                    stream: _offerDocument.snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const SizedBox.shrink(); // No banner while loading
-                      }
-                      if (!snapshot.hasData || snapshot.data == null) {
-                        return const SizedBox.shrink(); // No banner if no data
-                      }
-                      final data = snapshot.data!.data() as Map<String, dynamic>?;
-                      final String? saleTitle = data?['Saletitle'];
-                      final bool status = data?['status'] ?? false;
-
-                      if (saleTitle == null || !status) {
-                        return const SizedBox.shrink(); // No banner if status is false
-                      }
-
-                      return Container(
-                        color: Colors.black,
-                        height: 50,
-                        child: Marquee(
-                          text: saleTitle,
+                  const Icon(Icons.shopping_cart, color: Colors.black),
+                  ValueListenableBuilder<int>(
+                    valueListenable: cartNotifier,
+                    builder: (context, cartCount, child) {
+                      return cartCount > 0
+                          ? Container(
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red,
+                        ),
+                        child: Text(
+                          '$cartCount',
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16.0,
+                            fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
-                          scrollAxis: Axis.horizontal,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          blankSpace: 20.0,
-                          velocity: 50.0,
-                          pauseAfterRound: const Duration(seconds: 1),
-                          startPadding: 10.0,
-                          accelerationDuration: const Duration(seconds: 1),
-                          accelerationCurve: Curves.linear,
-                          decelerationDuration: const Duration(milliseconds: 500),
-                          decelerationCurve: Curves.easeOut,
                         ),
-                      );
+                      )
+                          : const SizedBox.shrink();
                     },
                   ),
-
-                  // Carousel Section
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: CarouselSlider(
-                      options: CarouselOptions(
-                        height: 200.0,
-                        autoPlay: true,
-                        enlargeCenterPage: true,
-                        enableInfiniteScroll: true,
-                        autoPlayInterval: const Duration(seconds: 3),
-                      ),
-                      items: carouselImages.map((imageUrl) {
-                        return Builder(
-                          builder: (BuildContext context) {
-                            return Container(
-                              width: MediaQuery.of(context).size.width,
-                              margin: const EdgeInsets.symmetric(horizontal: 1.0),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15.0),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(15.0),
-                                child: Stack(
-                                  fit: StackFit.expand,
-                                  children: [
-                                    Image.network(
-                                      imageUrl,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  // Departments Section
-                  _buildSectionHeader(
-                    title: 'Engineering',
-                    icon: Icons.school,
-                    onSeeAllPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SeeAllPage(
-                                title: 'Engineering Departments',
-                                items: departmentCards,
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildHorizontalList(departmentCards, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SeeAllPage(
-                              title: 'Engineering Departments',
-                              items: departmentCards,
-                            ),
-                      ),
-                    );
-                  }),
-                  _buildSectionHeader(
-                    title: 'Placement Material',
-                    icon: Icons.lightbulb,
-                    onSeeAllPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              SeeAllPage(
-                                title: 'Placement Material',
-                                items: aptitudeCourses,
-                              ),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildHorizontalList(aptitudeCourses, () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            SeeAllPage(
-                              title: 'Placement Material',
-                              items: aptitudeCourses,
-                            ),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 80),
                 ],
               ),
             ),
           ),
-        ),
-        if (_isLoading)
-          Container(
-            color: Colors.white.withOpacity(0.8),
-            child: Center(
-              child: LoadingAnimationWidget.staggeredDotsWave(
-                color: Colors.blueAccent,
-                size: 50,
+          const SizedBox(width: 10),
+        ],
+      ),
+      body: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Sale Title with Marquee Animation
+            _isLoading
+                ? _buildShimmerStrip() // Shimmer for the Sale Title
+                : StreamBuilder<DocumentSnapshot>(
+              stream: _offerDocument.snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData || snapshot.data == null) {
+                  return const SizedBox.shrink();
+                }
+                final data = snapshot.data!.data() as Map<String, dynamic>?;
+                final String? saleTitle = data?['Saletitle'];
+                final bool status = data?['status'] ?? false;
+
+                if (saleTitle == null || !status) {
+                  return const SizedBox.shrink();
+                }
+
+                return Container(
+                  color: Colors.black,
+                  height: 50,
+                  child: Marquee(
+                    text: saleTitle,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.0,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    scrollAxis: Axis.horizontal,
+                  ),
+                );
+              },
+            ),
+
+            // Carousel Section
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: _isLoading
+                  ? _buildShimmerCarousel() // Shimmer for Carousel
+                  : CarouselSlider(
+                options: CarouselOptions(
+                  height: 200.0,
+                  autoPlay: true,
+                  enlargeCenterPage: true,
+                  enableInfiniteScroll: true,
+                  autoPlayInterval: const Duration(seconds: 3),
+                ),
+                items: carouselImages.map((imageUrl) {
+                  return Builder(
+                    builder: (BuildContext context) {
+                      return Container(
+                        width: MediaQuery.of(context).size.width,
+                        margin: const EdgeInsets.symmetric(horizontal: 1.0),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(15.0),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(15.0),
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                }).toList(),
               ),
             ),
-          ),
-      ],
+
+            // Departments Section
+            _buildSectionHeader(
+              title: 'Engineering',
+              icon: Icons.school,
+              onSeeAllPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SeeAllPage(
+                      title: 'Engineering Departments',
+                      items: departmentCards,
+                    ),
+                  ),
+                );
+              },
+            ),
+            _isLoading
+                ? _buildShimmerGrid() // Shimmer for department cards
+                : _buildHorizontalList(departmentCards, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SeeAllPage(
+                    title: 'Engineering Departments',
+                    items: departmentCards,
+                  ),
+                ),
+              );
+            }),
+
+            // Placement Material Section
+            _buildSectionHeader(
+              title: 'Placement Material',
+              icon: Icons.lightbulb,
+              onSeeAllPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SeeAllPage(
+                      title: 'Placement Material',
+                      items: aptitudeCourses,
+                    ),
+                  ),
+                );
+              },
+            ),
+            _isLoading
+                ? _buildShimmerGrid() // Shimmer for aptitude cards
+                : _buildHorizontalList(aptitudeCourses, () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SeeAllPage(
+                    title: 'Placement Material',
+                    items: aptitudeCourses,
+                  ),
+                ),
+              );
+            }),
+            const SizedBox(height: 80),
+          ],
+        ),
+      ),
     );
   }
+
+
+  Widget _buildShimmerStrip() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: 50,
+        color: Colors.grey.shade300,
+      ),
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: List.generate(3, (index) {
+          return Expanded(
+            child: Shimmer.fromColors(
+              baseColor: Colors.grey.shade300,
+              highlightColor: Colors.grey.shade100,
+              child: Container(
+                margin: const EdgeInsets.only(right: 16.0),
+                height: 160,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+
+  Widget _buildShimmerCarousel() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: 200,
+        margin: const EdgeInsets.symmetric(horizontal: 16.0),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade300,
+          borderRadius: BorderRadius.circular(15.0),
+        ),
+      ),
+    );
+  }
+
   Padding _buildSectionHeader(
       {required String title, required IconData icon, required VoidCallback onSeeAllPressed}) {
     return Padding(

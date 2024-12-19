@@ -123,7 +123,7 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  Future<void> _deleteSelectedMessages(List messages) async {
+  Future<void> _deleteSelectedMessages(List<dynamic> messages) async {
     bool confirm = await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -148,16 +148,23 @@ class _ChatScreenState extends State<ChatScreen> {
 
         List<dynamic> allMessages = documentSnapshot['messages'] ?? [];
 
-        // Create a new list excluding the selected messages
-        List<dynamic> updatedMessages = allMessages.where((message) {
-          final bool isSelected = _selectedMessages.contains(allMessages.indexOf(message));
-          final bool isOwnedByUser = message['email'] == currentUserEmail;
+        // Create a list of messages to delete
+        List<dynamic> messagesToDelete = [];
+        for (int selectedIndex in _selectedMessages) {
+          final selectedMessage = allMessages[selectedIndex];
 
-          // Only exclude messages that are both selected and owned by the user
-          return !(isSelected && isOwnedByUser);
+          // Only add messages that belong to the current user
+          if (selectedMessage['email'] == currentUserEmail) {
+            messagesToDelete.add(selectedMessage);
+          }
+        }
+
+        // Create a new list excluding the messages to delete
+        List<dynamic> updatedMessages = allMessages.where((message) {
+          return !messagesToDelete.contains(message);
         }).toList();
 
-        // Update Firestore with the filtered list
+        // Update Firestore with the filtered messages
         await FirebaseFirestore.instance
             .collection('CHAT_GROUP')
             .doc(widget.subjectId)
@@ -179,7 +186,7 @@ class _ChatScreenState extends State<ChatScreen> {
         );
       } catch (e) {
         Fluttertoast.showToast(
-          msg: "Failed to delete the selected messages.",
+          msg: "Failed to delete the selected messages: $e",
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.BOTTOM, // Position of the toast
           backgroundColor: Colors.red,

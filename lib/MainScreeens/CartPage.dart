@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import '../StateManager/CartState.dart';
 import 'Billing Page.dart';
 
@@ -154,14 +155,19 @@ class CartCard extends StatelessWidget {
                 alignment: Alignment.centerRight,
                 child: OutlinedButton(
                   onPressed: () {
-                    // Remove item based on subjectId
                     cartNotifier.removeItemById(subjectId);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Removed item: $subjectName"),
-                      ),
+
+                    // Show FlutterToast
+                    Fluttertoast.showToast(
+                      msg: "Removed item: $subjectName",
+                      toastLength: Toast.LENGTH_SHORT,
+                      gravity: ToastGravity.BOTTOM, // Position of the toast
+                      backgroundColor: Colors.black54,
+                      textColor: Colors.white,
+                      fontSize: 16.0,
                     );
                   },
+
                   style: OutlinedButton.styleFrom(
                     backgroundColor: Colors.white,
                     side: const BorderSide(color: Colors.black, width: 1),

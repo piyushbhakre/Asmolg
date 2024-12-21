@@ -202,6 +202,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -234,6 +235,16 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: Column(
         children: [
+          Container(
+            width: double.infinity,
+            color: Colors.amber.shade100,
+            padding: const EdgeInsets.all(8.0),
+            child: const Text(
+              "⚠️ All messages will be deleted every Friday midnight!",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.red),
+            ),
+          ),
           Expanded(
             child: StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance
@@ -294,8 +305,8 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Align(
                             alignment: isCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
                             child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              margin: const EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                              padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                               decoration: BoxDecoration(
                                 color: isCurrentUser ? Colors.lightBlue.shade100 : Colors.white,
                                 borderRadius: BorderRadius.only(
@@ -420,8 +431,8 @@ class _ChatScreenState extends State<ChatScreen> {
                   backgroundColor: Colors.blueAccent, // Match the grey send button background
                   child: _isSending
                       ? const CircularProgressIndicator(
-                    color: Colors.grey,
-                    strokeWidth: 2,
+                    color: Colors.white,
+                    strokeWidth: 4,
                   )
                       : IconButton(
                     icon: const Icon(Icons.send, color: Colors.white), // Grey send icon

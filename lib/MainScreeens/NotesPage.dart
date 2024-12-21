@@ -4,6 +4,7 @@ import 'package:cherry_toast/cherry_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shimmer/shimmer.dart';
 import '../fileViewer.dart';
 
@@ -27,33 +28,85 @@ class _NotesPageState extends State<NotesPage> {
   String _searchTerm = ''; // Holds the search term entered by the user
   final TextEditingController _searchController = TextEditingController();
 
-  Future<QuerySnapshot> fetchNotes() {
+  bool _isLoading = false; // Track loading state
 
-    return FirebaseFirestore.instance
-        .collection('notes')
-        .where('department', isEqualTo: widget.departmentDocId)
-        .get()
-        .then((QuerySnapshot notesSnapshot) async {
-      if (notesSnapshot.docs.isNotEmpty) {
+  // Fetch Notes
+  Future<List<Map<String, dynamic>>> fetchNotes() async {
+    try {
+      // Fetch department document
+      QuerySnapshot departmentSnapshot = await FirebaseFirestore.instance
+          .collection('notes')
+          .where('department', isEqualTo: widget.departmentDocId)
+          .get();
 
-        final departmentDocId = notesSnapshot.docs.first.id;
+      if (departmentSnapshot.docs.isNotEmpty) {
+        final departmentDocId = departmentSnapshot.docs.first.id;
 
-
-        return FirebaseFirestore.instance
+        // Fetch subjects and content
+        QuerySnapshot contentSnapshot = await FirebaseFirestore.instance
             .collection('notes')
             .doc(departmentDocId)
             .collection('subjects')
             .doc(widget.subjectDocId)
             .collection('content')
             .get();
+
+        return contentSnapshot.docs
+            .map((doc) => doc.data() as Map<String, dynamic>)
+            .toList();
       } else {
         throw Exception('No department found matching the provided departmentDocId.');
       }
+    } catch (e) {
+      throw Exception('Error fetching notes: $e');
+    }
+  }
+
+  // Floating button click - Loading effect with motivational text
+  Future<void> _handleFloatingButtonClick() async {
+    setState(() {
+      _isLoading = true; // Show loading screen
     });
+
+    final chatGroupRef = FirebaseFirestore.instance.collection('CHAT_GROUP');
+
+    try {
+      final snapshot = await chatGroupRef.doc(widget.subjectDocId).get();
+
+      if (!snapshot.exists) {
+        // Create a new document if it doesn't exist
+        await chatGroupRef.doc(widget.subjectDocId).set({
+          'subjectName': widget.subjectName,
+          'createdAt': FieldValue.serverTimestamp(),
+          'messages': [], // Initialize with an empty array
+        });
+      }
+
+      // Redirect to ChatScreen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+              subjectId: widget.subjectDocId, subjectName: widget.subjectName),
+        ),
+      );
+    } catch (error) {
+      CherryToast.error(
+        title: const Text("Error"),
+        description: Text("Failed to load chat group. Please try again."),
+      ).show(context);
+    } finally {
+      setState(() {
+        _isLoading = false; // Hide loading screen
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Get the navigation bar height dynamically
+    final double bottomPadding = MediaQuery.of(context).padding.bottom;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -80,182 +133,167 @@ class _NotesPageState extends State<NotesPage> {
           },
         ),
       ),
-      body: Stack(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Search bar
-                TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Search Notes...',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.grey),
+      body: SafeArea(
+        bottom: false, // Allow manual handling of bottom padding
+        child: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                children: [
+                  // Search bar
+                  TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      prefixIcon: const Icon(Icons.search),
+                      hintText: 'Search Notes...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(color: Colors.grey),
+                      ),
                     ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchTerm = value.toLowerCase(); // Update search term
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // FutureBuilder to fetch notes
-                Expanded(
-                  child: FutureBuilder<QuerySnapshot>(
-                    future: fetchNotes(),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return Shimmer.fromColors(
-                          baseColor: Colors.grey[300]!,
-                          highlightColor: Colors.white,
-                          child: ListView.builder(
-                            itemCount: 8, // Number of shimmer items to show
-                            itemBuilder: (context, index) {
-                              return Container(
-                                margin: const EdgeInsets.symmetric(
-                                    vertical: 13.0, horizontal: 20.0),
-                                padding: const EdgeInsets.all(16.0),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      width: 30,
-                                      height: 30,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                        children: [
-                                          Container(
-                                            height: 16,
-                                            color: Colors.white,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Container(
-                                            height: 12,
-                                            width: 100,
-                                            color: Colors.white,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      }
-
-                      if (snapshot.hasError) {
-                        return Center(child: Text('Error: ${snapshot.error}'));
-                      }
-
-                      if (snapshot.hasData && snapshot.data != null) {
-                        final notesData = snapshot.data!.docs;
-
-                        if (notesData.isEmpty) {
-                          return const Center(
-                              child: Text('No notes found for this topic.'));
-                        }
-
-                        // Filter notes based on search term
-                        final filteredNotes = notesData.where((doc) {
-                          final noteData = doc.data() as Map<String, dynamic>;
-                          final noteName =
-                              noteData['content']?.toLowerCase() ?? 'unknown';
-                          return noteName.contains(_searchTerm);
-                        }).toList();
-
-                        if (filteredNotes.isEmpty) {
-                          return const Center(
-                              child: Text(
-                                  'No notes found matching your search.'));
-                        }
-
-                        return ListView.builder(
-                          itemCount: filteredNotes.length,
-                          itemBuilder: (context, index) {
-                            final note = filteredNotes[index].data()
-                            as Map<String, dynamic>;
-
-                            // Ensure required fields exist
-                            final noteName = note['content'] ?? 'Unknown';
-                            final uploadedDate =
-                                note['uploadedDate'] ?? 'Unknown Date';
-                            final fileUrl = note['fileURL'] ?? '#';
-                            final fileType = note['type'] ??
-                                'pdf'; // Default to 'pdf'
-
-                            return ModernNoteCard(
-                              noteName: noteName,
-                              uploadedDate: uploadedDate,
-                              fileUrl: fileUrl,
-                              fileType: fileType,
-                            );
-                          },
-                        );
-                      }
-
-                      return const Center(child: Text('No notes found.'));
+                    onChanged: (value) {
+                      setState(() {
+                        _searchTerm = value.toLowerCase(); // Update search term
+                      });
                     },
                   ),
-                )
-              ],
+                  const SizedBox(height: 16),
+
+                  // Notes list
+                  Expanded(
+                    child: FutureBuilder<List<Map<String, dynamic>>>(
+                      future: fetchNotes(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          // Shimmer Effect
+                          return Shimmer.fromColors(
+                            baseColor: Colors.grey[300]!,
+                            highlightColor: Colors.white,
+                            child: ListView.builder(
+                              itemCount: 8,
+                              itemBuilder: (context, index) {
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 8),
+                                  height: 80,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        }
+
+                        if (snapshot.hasError) {
+                          return Center(child: Text('Error: ${snapshot.error}'));
+                        }
+
+                        if (snapshot.hasData) {
+                          final notesData = snapshot.data!;
+                          final filteredNotes = notesData.where((note) {
+                            final noteName =
+                                note['content']?.toString().toLowerCase() ?? '';
+                            return noteName.contains(_searchTerm);
+                          }).toList();
+
+                          if (filteredNotes.isEmpty) {
+                            return const Center(
+                                child: Text('No notes found matching your search.'));
+                          }
+
+                          return ListView.builder(
+                            itemCount: filteredNotes.length,
+                            itemBuilder: (context, index) {
+                              final note = filteredNotes[index];
+                              return ModernNoteCard(
+                                noteName: note['content'] ?? 'Unknown',
+                                uploadedDate: note['uploadedDate'] ?? 'Unknown Date',
+                                fileUrl: note['fileURL'] ?? '#',
+                                fileType: note['type'] ?? 'pdf',
+                              );
+                            },
+                          );
+                        }
+
+                        return const Center(child: Text('No notes found.'));
+                      },
+                    ),
+                  )
+                ],
+              ),
             ),
-          ),
-          Align(
-            alignment: Alignment.bottomRight,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 30, right: 30),
+
+            // Floating Action Button - Adjusted for Navigation Bar
+            Positioned(
+              bottom: bottomPadding + 50, // Adjust based on navigation bar height
+              right: 30,
               child: FloatingActionButton(
-                onPressed: () async {
-                  final chatGroupRef =
-                  FirebaseFirestore.instance.collection('CHAT_GROUP');
-
-                  final snapshot = await chatGroupRef
-                      .doc(widget.subjectDocId)
-                      .get();
-
-                  if (snapshot.exists) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ChatScreen(
-                            subjectId: widget.subjectDocId,
-                            subjectName: widget.subjectName),
-                      ),
-                    );
-                  } else {
-                    CherryToast.info(
-                      title: Text("Coming Soon"),
-                      description: Text(
-                          "The chat group for this subject is not yet available."),
-                    ).show(context);
-                  }
-                },
+                onPressed: _handleFloatingButtonClick,
                 backgroundColor: Colors.blue,
                 child: const Icon(Icons.chat, color: Colors.white),
               ),
             ),
-          ),
-        ],
+
+            // Loading Overlay
+            if (_isLoading)
+              Positioned.fill(
+                child: Container(
+                  color: Colors.black.withOpacity(0.6), // Blur background
+                  child: Center(
+                    child: Card(
+                      color: Colors.white, // Completely white card view
+                      elevation: 10,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(height: 8),
+
+                            // Loading Animation - Staggered Dots Wave
+                            LoadingAnimationWidget.staggeredDotsWave(
+                              color: Colors.blue, // Customize color
+                              size: 50,           // Customize size
+                            ),
+
+                            const SizedBox(height: 16),
+
+                            // Motivational Text
+                            const Text(
+                              "Get ready to join your group chat!",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+
+                            const SizedBox(height: 8),
+
+                            const Text(
+                              "We’re preparing everything for you...",
+                              style: TextStyle(fontSize: 14, color: Colors.grey),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+          ],
+        ),
       ),
     );
   }
+
+
 }
 
 

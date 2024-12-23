@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:asmolg/Authentication/AuthWrapper.dart';
 import 'package:asmolg/Provider/DevelopermodeDectector.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -28,7 +27,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initializeApp() async {
-    await _fetchSplashData();
+    // await _fetchSplashData();
 
     // Perform FCM token storage and expired subject deletion
     await fcmController.storeFcmToken();
@@ -51,31 +50,31 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
-  Future<void> _fetchSplashData() async {
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('Miscellaneous')
-          .doc('DynamicSplash')
-          .get();
-
-      if (snapshot.exists) {
-        setState(() {
-          companyName = snapshot.data()?['CompanyName'] ?? "";
-          tagline = snapshot.data()?['Tagline'] ?? "";
-          isDataFetched = true;
-        });
-      } else {
-        print("Document does not exist");
-      }
-    } catch (e) {
-      print("Error fetching splash data: $e");
-      setState(() {
-        companyName = "Error";
-        tagline = "Unable to load data.";
-        isDataFetched = true;
-      });
-    }
-  }
+  // Future<void> _fetchSplashData() async {
+  //   try {
+  //     final snapshot = await FirebaseFirestore.instance
+  //         .collection('Miscellaneous')
+  //         .doc('DynamicSplash')
+  //         .get();
+  //
+  //     if (snapshot.exists) {
+  //       setState(() {
+  //         companyName = snapshot.data()?['CompanyName'] ?? "";
+  //         tagline = snapshot.data()?['Tagline'] ?? "";
+  //         isDataFetched = true;
+  //       });
+  //     } else {
+  //       print("Document does not exist");
+  //     }
+  //   } catch (e) {
+  //     print("Error fetching splash data: $e");
+  //     setState(() {
+  //       companyName = "Error";
+  //       tagline = "Unable to load data.";
+  //       isDataFetched = true;
+  //     });
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -100,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8.0),
                     child: Text(
-                      tagline,
+                      'Offered by',
                       style: GoogleFonts.alata(
                         fontSize: 18,
                         color: Colors.black,
@@ -114,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16.0),
                     child: Text(
-                      companyName,
+                      'Triroop Education Pvt Ltd',
                       style: GoogleFonts.alata(
                         fontSize: 20,
                         color: Colors.black,

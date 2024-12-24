@@ -53,7 +53,9 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
         widget.fileUrl,
         key: _pdfViewerKey,
         enableTextSelection: false, // Disable text selection
-        canShowHyperlinkDialog: false, // Disable hyperlink dialogs
+        canShowHyperlinkDialog: false,
+        canShowPageLoadingIndicator: true,
+        canShowPaginationDialog: true,
       ),
     );
   }

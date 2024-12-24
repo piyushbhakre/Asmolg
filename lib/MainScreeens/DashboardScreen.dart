@@ -371,7 +371,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.blueAccent),
+              Icon(icon, color: Colors.black),
               const SizedBox(width: 8),
               Text(
                 title,
@@ -387,7 +387,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onPressed: onSeeAllPressed,
             child: const Text(
               'See All',
-              style: TextStyle(color: Colors.blueAccent),
+              style: TextStyle(color: Colors.black),
             ),
           ),
         ],
@@ -410,7 +410,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             return GestureDetector(
               onTap: onSeeAllPressed,
               child: CircleAvatar(
-                backgroundColor: Colors.blueAccent,
+                backgroundColor: Colors.black,
                 radius: 30,
                 child: const Icon(Icons.arrow_forward, color: Colors.white),
               ),

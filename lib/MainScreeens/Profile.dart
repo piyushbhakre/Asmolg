@@ -149,7 +149,7 @@ class _ProfileAppState extends State<ProfileApp> {
       text: 'Do you want to logout?',
       confirmBtnText: 'Yes',
       cancelBtnText: 'No',
-      confirmBtnColor: Colors.green,
+      confirmBtnColor: Colors.black,
       onConfirmBtnTap: () {
         Navigator.of(context).pop(); // Close the dialog
         _signOut(); // Call sign-out function
@@ -287,7 +287,7 @@ class _ProfileAppState extends State<ProfileApp> {
                                   tabs: [
                                     Tab(text: 'Bought Courses'),
                                   ],
-                                  indicatorColor: Colors.blueAccent,
+                                  indicatorColor: Colors.black,
                                   labelPadding: EdgeInsets.zero,
                                   labelStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
                                   unselectedLabelColor: Colors.grey,
@@ -446,7 +446,7 @@ class _ProfileAppState extends State<ProfileApp> {
                         ],
                       ),
                       child: ListTile(
-                        leading: const Icon(Icons.book, color: Colors.blueAccent),
+                        leading: const Icon(Icons.book, color: Colors.black),
                         title: Text(
                           course['content'],
                           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

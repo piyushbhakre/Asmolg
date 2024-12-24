@@ -125,7 +125,7 @@ class _SupportPageState extends State<SupportPage> {
                       : ElevatedButton(
                     onPressed: _submitForm,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.black,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12.0),
                       ),
@@ -146,7 +146,7 @@ class _SupportPageState extends State<SupportPage> {
                     'Privacy Policy',
                     'https://www.asmolg.co.in/legals',
                     Icons.lock_outline,
-                    Colors.blue,
+                    Colors.black,
                   ),
                   _buildOptionTile(
                     'Terms and Conditions',

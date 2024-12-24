@@ -428,7 +428,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 const SizedBox(width: 8), // Space between input box and send button
                 CircleAvatar(
                   radius: 24, // Circular button
-                  backgroundColor: Colors.blueAccent, // Match the grey send button background
+                  backgroundColor: Colors.black, // Match the grey send button background
                   child: _isSending
                       ? const CircularProgressIndicator(
                     color: Colors.white,

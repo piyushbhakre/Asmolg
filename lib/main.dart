@@ -12,7 +12,7 @@ const String deleteExpiredSubjectsTask = "deleteExpiredSubjects";
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Get.put(DeveloperModeDetection());
+  // Get.put(DeveloperModeDetection());
   await Firebase.initializeApp();
   Get.put(UserController());
 

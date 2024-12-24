@@ -446,13 +446,6 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
                                 fontSize: 16,
                                 fontWeight: FontWeight.normal,
                                 color: Colors.green,
-                                shadows: [
-                                  Shadow(
-                                    blurRadius: 8.0,
-                                    color: Colors.green,
-                                    offset: Offset(0, 0),
-                                  ),
-                                ],
                               ),
                             ),
                           const SizedBox(height: 16),
@@ -572,7 +565,6 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
       ],
     );
   }
-
 
   Widget _buildTotalRow(String title, double value, {required TextStyle style}) {
     return Row(

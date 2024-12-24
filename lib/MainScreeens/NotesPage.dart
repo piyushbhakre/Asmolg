@@ -231,7 +231,7 @@ class _NotesPageState extends State<NotesPage> {
               right: 30,
               child: FloatingActionButton(
                 onPressed: _handleFloatingButtonClick,
-                backgroundColor: Colors.blue,
+                backgroundColor: Colors.black,
                 child: const Icon(Icons.chat, color: Colors.white),
               ),
             ),
@@ -257,7 +257,7 @@ class _NotesPageState extends State<NotesPage> {
 
                             // Loading Animation - Staggered Dots Wave
                             LoadingAnimationWidget.staggeredDotsWave(
-                              color: Colors.blue, // Customize color
+                              color: Colors.black, // Customize color
                               size: 50,           // Customize size
                             ),
 

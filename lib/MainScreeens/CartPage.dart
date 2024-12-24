@@ -13,11 +13,11 @@ class CartPage extends StatelessWidget {
         appBar: AppBar(
           title: const Text(
             "Cart",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
           centerTitle: true,
-          backgroundColor: Colors.black,
-          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.white,
+          iconTheme: const IconThemeData(color: Colors.black),
           elevation: 1,
         ),
         body: ValueListenableBuilder<int>(

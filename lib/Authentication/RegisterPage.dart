@@ -33,6 +33,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _obscureTextPassword = true;
   bool _emailVerified = false;
   bool _isLoadingEmail = false;
+  bool _isVerifyingEmail = false;
   bool _showEmailOtpFields = false;
   bool _obscureTextRepeatPassword = true;
   Timer? _otpTimer;
@@ -107,14 +108,14 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     setState(() {
-      _isLoadingEmail = true;
+      _isVerifyingEmail = true;
     });
 
     bool isValid = EmailOTP.verifyOTP(otp: _emailOtpController.text);
     if (isValid) {
       setState(() {
         _emailVerified = true;
-        _isLoadingEmail = false;
+        _isVerifyingEmail = false;
       });
       CherryToast.success(
         title: Text("Verified"),
@@ -122,7 +123,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ).show(context);
     } else {
       setState(() {
-        _isLoadingEmail = false;
+        _isVerifyingEmail = false;
       });
       CherryToast.error(
         title: Text("Error"),
@@ -333,16 +334,27 @@ class _RegisterPageState extends State<RegisterPage> {
                               enabled: true,
                               decoration: InputDecoration(
                                 labelText: "Enter your email",
+                                labelStyle: const TextStyle(color: Colors.black), // Label color
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.blueAccent),
+                                  borderSide: const BorderSide(color: Colors.black), // Default border color
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.black), // Border color when not focused
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: const BorderSide(color: Colors.black), // Border color when focused
                                 ),
                                 filled: true,
-                                fillColor: Colors.blue[50],
-                                prefixIcon: Icon(Icons.email, color: Colors.blue),
+                                fillColor: Colors.white,
+                                prefixIcon: const Icon(Icons.email, color: Colors.black), // Icon color
                               ),
-                              style: TextStyle(fontSize: 16),
-                            ),
+                              cursorColor: Colors.black,
+                              style: const TextStyle(fontSize: 16, color: Colors.black), // Text color
+                            )
+
                           ),
                           SizedBox(width: 8),
                           ElevatedButton(
@@ -363,7 +375,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               elevation: 4,
                               backgroundColor: _otpCooldown > 0 || _isLoadingEmail
                                   ? Colors.green
-                                  : Colors.blue,
+                                  : Colors.black,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               minimumSize: Size(120, 50),
                             ),
@@ -384,10 +396,11 @@ class _RegisterPageState extends State<RegisterPage> {
                               borderSide: BorderSide(color: Colors.greenAccent),
                             ),
                             filled: true,
-                            fillColor: Colors.blue[50],
+                            fillColor: Colors.white,
                             prefixIcon: Icon(Icons.email, size: 28, color: Colors.green),
                             suffixIcon: Icon(Icons.check_circle, color: Colors.green, size: 28),
                           ),
+                          cursorColor: Colors.black,
                           style: TextStyle(fontSize: 16),
                         ),
                       ),
@@ -398,28 +411,36 @@ class _RegisterPageState extends State<RegisterPage> {
                           Expanded(
                             child: TextField(
                               controller: _emailOtpController,
-                              decoration: InputDecoration(
-                                labelText: "Enter OTP",
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  borderSide: BorderSide(color: Colors.blueAccent),
+                                decoration: InputDecoration(
+                                  labelText: "Enter OTP",
+                                  labelStyle: const TextStyle(color: Colors.black), // Label color
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Colors.black), // Default border color
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Colors.black), // Border color when not focused
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(color: Colors.black), // Border color when focused
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.white,
+                                  prefixIcon: const Icon(Icons.email, color: Colors.black), // Icon color
                                 ),
-                                filled: true,
-                                fillColor: Colors.blue[50],
-                                prefixIcon: Icon(Icons.lock, color: Colors.blue),
-                              ),
-                              style: TextStyle(fontSize: 16),
                             ),
                           ),
                           SizedBox(width: 8),
                           ElevatedButton(
-                            onPressed: _isLoadingEmail ? null : _verifyEmailOtp,
-                            child: _isLoadingEmail
+                            onPressed: _isVerifyingEmail ? null : _verifyEmailOtp,
+                            child: _isVerifyingEmail
                                 ? CircularProgressIndicator(color: Colors.white)
                                 : Text("Verify", style: TextStyle(color: Colors.white)),
                             style: ElevatedButton.styleFrom(
                               elevation: 4,
-                              backgroundColor: Colors.blue,
+                              backgroundColor: Colors.black,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                               minimumSize: Size(120, 50),
                             ),
@@ -484,7 +505,7 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                         style: ElevatedButton.styleFrom(
                           elevation: 6,
-                          backgroundColor: _emailVerified ? Colors.blue : Colors.grey,
+                          backgroundColor: _emailVerified ? Colors.black : Colors.grey,
                           padding: EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -504,7 +525,7 @@ class _RegisterPageState extends State<RegisterPage> {
               color: Colors.black.withOpacity(0.5),
               child: Center(
                 child: LoadingAnimationWidget.staggeredDotsWave(
-                  color: Colors.blueAccent,
+                  color: Colors.black,
                   size: 50,
                 ),
               ),
@@ -526,30 +547,35 @@ class _RegisterPageState extends State<RegisterPage> {
       controller: controller,
       keyboardType: keyboardType,
       inputFormatters: inputFormatters,
-      cursorColor: Colors.blueAccent,
+      cursorColor: Colors.black, // Black cursor
       decoration: InputDecoration(
         labelText: label,
+        labelStyle: const TextStyle(color: Colors.black), // Label color
         hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black54), // Hint text color
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue),
+          borderSide: const BorderSide(color: Colors.black), // Default border
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue),
+          borderSide: const BorderSide(color: Colors.black), // Border when enabled
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue),
+          borderSide: const BorderSide(color: Colors.black), // Border when focused
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue),
+          borderSide: const BorderSide(color: Colors.black), // Border when disabled
         ),
+        filled: true,
+        fillColor: Colors.white, // Background color inside the field
       ),
-      style: TextStyle(fontSize: 16),
+      style: const TextStyle(fontSize: 16, color: Colors.black), // Input text color
     );
   }
+
 
   Widget _buildPasswordField({
     required TextEditingController controller,
@@ -561,37 +587,39 @@ class _RegisterPageState extends State<RegisterPage> {
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
+      cursorColor: Colors.black, // Cursor color set to black
+      style: const TextStyle(fontSize: 16, color: Colors.black), // Text color set to black
       decoration: InputDecoration(
         labelText: label,
-        hintText: hintText, // Hint text color set to blue
+        labelStyle: const TextStyle(color: Colors.black), // Label color set to black
+        hintText: hintText,
+        hintStyle: const TextStyle(color: Colors.black54), // Hint text color set to black54
         filled: true,
-        fillColor: Colors.white,
+        fillColor: Colors.white, // Background fill color set to white
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue), // Default border color blue
+          borderSide: const BorderSide(color: Colors.black), // Default border color black
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+          borderSide: const BorderSide(color: Colors.black), // Border color when enabled
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+          borderSide: const BorderSide(color: Colors.black), // Border color when focused
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
+          borderSide: const BorderSide(color: Colors.black), // Border color when disabled
         ),
         suffixIcon: IconButton(
           icon: Icon(
             obscureText ? Icons.visibility_off : Icons.visibility,
-            color: Colors.blue, // Icon color set to blue
+            color: Colors.black, // Icon color set to black
           ),
           onPressed: onToggle,
         ),
       ),
-      cursorColor: Colors.blueAccent, // Cursor color set to blue
     );
-
   }
 }

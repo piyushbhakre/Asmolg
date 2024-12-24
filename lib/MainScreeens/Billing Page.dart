@@ -425,13 +425,6 @@ class _BillingPageState extends State<BillingPage> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.normal,
                                   color: Colors.green,
-                                  shadows: [
-                                    Shadow(
-                                      blurRadius: 8.0,
-                                      color: Colors.green,
-                                      offset: Offset(0, 0),
-                                    ),
-                                  ],
                                 ),
                               ),
                             const SizedBox(height: 16),

@@ -49,8 +49,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF3A7BD5), // Deep blue at the top
-                  Color(0xFF00D2FF), // Light blue at the bottom
+                  Colors.black, // Deep blue at the top
+                  Colors.black, // Light blue at the bottom
                 ],
               ),
             ),
@@ -76,17 +76,17 @@ class _HomeScreenState extends State<HomeScreen> {
           FlashyTabBarItem(
             icon: const Icon(FontAwesomeIcons.bookReader),
             title: const Text('Courses'),
-            activeColor: Color(0xFF3366FF), // Educational color theme
+            activeColor: Colors.black, // Educational color theme
           ),
           FlashyTabBarItem(
             icon: const Icon(FontAwesomeIcons.userGraduate),
             title: const Text('Profile'),
-            activeColor: Color(0xFF3366FF),
+            activeColor: Colors.black,
           ),
           FlashyTabBarItem(
             icon: const Icon(FontAwesomeIcons.headset),
             title: const Text('Support'),
-            activeColor: Color(0xFF3366FF),
+            activeColor: Colors.black,
           ),
         ],
       ),

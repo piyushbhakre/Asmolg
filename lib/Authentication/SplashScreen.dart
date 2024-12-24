@@ -33,12 +33,12 @@ class _SplashScreenState extends State<SplashScreen> {
     await fcmController.storeFcmToken();
     await expiredSubjectsController.deleteExpiredSubjects();
 
-    //------------------REMOVE IT FOR DEBUGGING-------------------------//
-
-    final detection = DeveloperModeDetection();
-    await detection.checkDeveloperModeAndExit();
-
-    //-----------------COMMENT ABOVE CODE WHILE DEBUGGING----------------//
+    // //------------------REMOVE IT FOR DEBUGGING-------------------------//
+    //
+    // final detection = DeveloperModeDetection();
+    // await detection.checkDeveloperModeAndExit();
+    //
+    // //-----------------COMMENT ABOVE CODE WHILE DEBUGGING----------------//
 
 
     // Navigate to AuthWrapper after 3 seconds

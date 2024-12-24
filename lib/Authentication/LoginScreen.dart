@@ -312,26 +312,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   fillColor: Colors.white,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue), // Default border color blue
+                    borderSide: BorderSide(color: Colors.black), // Default border color blue
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+                    borderSide: BorderSide(color: Colors.black), // Blue border when enabled
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+                    borderSide: BorderSide(color: Colors.black), // Blue border when focused
                   ),
                   disabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(8),
-                    borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
+                    borderSide: BorderSide(color: Colors.black), // Blue border when disabled
                   ),
                   prefixIcon: Icon(
                     Icons.email,
-                    color: Colors.blue, // Prefix icon color set to blue
+                    color: Colors.black, // Prefix icon color set to blue
                   ),
                 ),
-                cursorColor: Colors.blueAccent, // Cursor color set to blue
+                cursorColor: Colors.black, // Cursor color set to blue
                 keyboardType: TextInputType.emailAddress, // Ensures email-specific keyboard
                 style: TextStyle(fontSize: 16), // Text style
                 ),
@@ -348,28 +348,28 @@ class _LoginScreenState extends State<LoginScreen> {
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blue), // Default border color blue
+                      borderSide: BorderSide(color: Colors.black), // Default border color blue
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blue), // Blue border when enabled
+                      borderSide: BorderSide(color: Colors.black), // Blue border when enabled
                     ),
                     prefixIcon: Icon(
                       Icons.password,
-                      color: Colors.blue, // Prefix icon color set to blue
+                      color: Colors.black, // Prefix icon color set to blue
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blue), // Blue border when focused
+                      borderSide: BorderSide(color: Colors.black), // Blue border when focused
                     ),
                     disabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blue), // Blue border when disabled
+                      borderSide: BorderSide(color: Colors.black), // Blue border when disabled
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscureTextPassword ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.blue, // Suffix icon color set to blue
+                        color: Colors.black, // Suffix icon color set to blue
                       ),
                       onPressed: () {
                         setState(() {
@@ -378,7 +378,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                   ),
-                  cursorColor: Colors.blueAccent, // Cursor color set to blue
+                  cursorColor: Colors.black, // Cursor color set to blue
                 ),
 
                 SizedBox(height: 16),
@@ -391,7 +391,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text(
                         "Forgot Password?",
                         style: TextStyle(
-                          color: Colors.blue,
+                          color: Colors.black,
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
@@ -405,7 +405,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         padding: EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.blue,
+                        backgroundColor: Colors.black,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -430,7 +430,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Text(
                           "Register now",
                           style: TextStyle(
-                            color: Colors.blue,
+                            color: Colors.black,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -448,7 +448,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 color: Colors.black.withOpacity(0.5),
                 child: Center(
                   child: LoadingAnimationWidget.staggeredDotsWave(
-                    color: Colors.blueAccent,
+                    color: Colors.black,
                     size: 50,
                   ),
                 ),

@@ -590,7 +590,7 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                               children: [
                                 const FaIcon(
                                   FontAwesomeIcons.bookOpen,
-                                  color: Colors.blueAccent,
+                                  color: Colors.black,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),
@@ -613,7 +613,7 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                               children: [
                                 const FaIcon(
                                   FontAwesomeIcons.userTie,
-                                  color: Colors.blueAccent,
+                                  color: Colors.black,
                                   size: 16,
                                 ),
                                 const SizedBox(width: 8),
@@ -659,7 +659,7 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                                         children: [
                                           const FaIcon(
                                             FontAwesomeIcons.moneyBill,
-                                            color: Colors.blueAccent,
+                                            color: Colors.black,
                                             size: 16,
                                           ),
                                           const SizedBox(width: 8),

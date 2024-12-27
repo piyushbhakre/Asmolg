@@ -203,7 +203,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
 
-    return Scaffold(
+    return SafeArea(child: Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white38,
@@ -442,9 +442,10 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
-          SizedBox(height: 20)
+          SizedBox(height: 10)
         ],
       ),
+    )
     );
   }
 }

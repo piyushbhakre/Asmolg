@@ -1,3 +1,4 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -203,9 +204,10 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
 
-    return SafeArea(child: Scaffold(
+    return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        bottom: OfflineBanner(),
         backgroundColor: Colors.white38,
         elevation: 0,
         title: Column(
@@ -445,7 +447,6 @@ class _ChatScreenState extends State<ChatScreen> {
           SizedBox(height: 10)
         ],
       ),
-    )
     );
   }
 }

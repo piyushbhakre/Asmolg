@@ -1,3 +1,4 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'department_card.dart'; // Import DepartmentCard
 import 'programming_course_card.dart'; // Import ProgrammingCourseCard
@@ -36,6 +37,7 @@ class _SeeAllPageState extends State<SeeAllPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        bottom: OfflineBanner(),
         backgroundColor: Colors.white,
         title: Text(widget.title),
       ),

@@ -1,4 +1,5 @@
 import 'package:asmolg/MainScreeens/oneSubBillingpage.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:asmolg/fileViewer.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,7 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:cherry_toast/cherry_toast.dart'; // CherryToast for notifications
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shimmer/shimmer.dart';
-import '../StateManager/CartState.dart';
+import '../Provider/CartState.dart';
 import 'CartPage.dart';
 
 class ContentPreviewPage extends StatefulWidget {
@@ -126,6 +127,7 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
         Scaffold(
           backgroundColor: Colors.white,
           appBar: AppBar(
+            bottom: OfflineBanner(),
             backgroundColor: Colors.white,
             elevation: 0,
             centerTitle: true,
@@ -399,7 +401,6 @@ class _ContentPreviewPageState extends State<ContentPreviewPage> {
     );
   }
 }
-
 
 class PDFCard extends StatelessWidget {
   final String title;

@@ -1,3 +1,4 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -40,6 +41,7 @@ class _AptitudeTopicPageState extends State<AptitudeTopicPage> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text('${widget.aptitudeName} Topics'),
+        bottom: OfflineBanner(),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),

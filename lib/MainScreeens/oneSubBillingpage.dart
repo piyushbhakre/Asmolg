@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -357,6 +358,7 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
                 AppBar(
                   title: const Text("Billing", style: TextStyle(color: Colors.white)),
                   backgroundColor: Colors.black,
+                  bottom: OfflineBanner(),
                   iconTheme: const IconThemeData(color: Colors.white),
                   elevation: 1,
                 ),

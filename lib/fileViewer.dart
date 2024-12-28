@@ -1,3 +1,4 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
@@ -39,6 +40,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     return Scaffold(
       appBar: AppBar(
         title: const Text('View File'),
+        bottom: OfflineBanner(),
         backgroundColor: Colors.white,
         elevation: 1,
         iconTheme: const IconThemeData(color: Colors.black),

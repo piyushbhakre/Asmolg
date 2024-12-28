@@ -1,7 +1,8 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:asmolg/MainScreeens/homepage.dart';
-import 'package:asmolg/StateManager/CartState.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
+import 'package:asmolg/Provider/CartState.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
 import 'package:http/http.dart' as http;
@@ -12,6 +13,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:toastification/toastification.dart';
 
 class BillingPage extends StatefulWidget {
   const BillingPage({
@@ -64,13 +66,23 @@ class _BillingPageState extends State<BillingPage> {
           isLoadingGST = false;
         });
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Failed to fetch GST rate.")),
+          toastification.show(
+            context: context,
+            title: const Text('Failed to fetch GST rate.'),
+            type: ToastificationType.error, // Error type toast
+            style: ToastificationStyle.minimal,
+            alignment: Alignment.topCenter, // Position of the toast
+            autoCloseDuration: const Duration(seconds: 3), // Auto-close after 3 seconds
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error fetching GST: $e")),
+      toastification.show(
+        context: context,
+        title: const Text('Please Connect Internet'),
+        type: ToastificationType.error, // Error type toast
+        style: ToastificationStyle.minimal,
+        alignment: Alignment.topCenter, // Position of the toast
+        autoCloseDuration: const Duration(seconds: 3), // Auto-close after 3 seconds
       );
       setState(() {
         isLoadingGST = false;
@@ -339,6 +351,7 @@ class _BillingPageState extends State<BillingPage> {
                     iconTheme: const IconThemeData(color: Colors.white),
                     elevation: 1,
                   ),
+                  OfflineBanner(),
                   Expanded(
                     child: Container(
                       color: Colors.white,

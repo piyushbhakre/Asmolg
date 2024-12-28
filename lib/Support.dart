@@ -1,3 +1,4 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -76,6 +77,7 @@ class _SupportPageState extends State<SupportPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            OfflineBanner(height: 24.0),
             SizedBox(height: 20),
             Text(
               'We\'re here to help!',

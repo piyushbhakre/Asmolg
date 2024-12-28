@@ -37,10 +37,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   font_awesome_flutter: ^10.7.0
-  animated_botton_navigation: ^0.0.7
   carousel_slider: ^5.0.0
-  path_provider: ^2.1.4
-  dio: ^5.7.0
   firebase_core: ^3.6.0
   cloud_firestore: ^5.4.4
   loading_animation_widget: ^1.3.0
@@ -48,28 +45,20 @@ dependencies:
   syncfusion_flutter_pdfviewer: ^27.1.51
   device_info_plus: ^10.1.2
   firebase_auth: ^5.3.1
-  intl_phone_field: ^3.2.0
   razorpay_flutter: ^1.3.7
   intl: ^0.19.0
-  share_plus: ^10.0.3
   flashy_tab_bar2: ^0.0.10
   awesome_notifications: ^0.9.3+1
   flutter_launcher_icons: ^0.13.1
-  connectivity_wrapper: ^1.1.0
   connectivity_plus: ^5.0.2
   cherry_toast: ^1.11.0
   quickalert: ^1.1.0
   flutter_upgrade_version: ^1.1.6
   package_info_plus: ^8.1.0
-  fluttertoast: ^8.2.10
   firebase_messaging: ^15.1.3
-  flutter_spinkit: ^5.2.1
-  onesignal_flutter: ^5.2.7
   shared_preferences: ^2.3.3
-  in_app_update: ^4.2.3
   firebase_crashlytics: ^4.1.5
   firebase_analytics: ^11.3.5
-  firebase_performance: ^0.10.0+10
   marquee: ^2.3.0
   email_otp: ^3.0.2
   shimmer: ^3.0.0
@@ -78,11 +67,15 @@ dependencies:
   get: ^4.6.6
   flutter_exit_app: ^1.1.4
   safe_device: ^1.1.9
+  internet_connection_checker: ^1.0.0+1
+  toastification: ^2.3.0
 
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^5.0.0
+  dependency_validator: any
 
 
 flutter_launcher_icons:

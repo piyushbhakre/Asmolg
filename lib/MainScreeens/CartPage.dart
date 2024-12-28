@@ -1,6 +1,7 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import '../StateManager/CartState.dart';
+import '../Provider/CartState.dart';
 import 'Billing Page.dart';
 
 class CartPage extends StatelessWidget {
@@ -15,6 +16,7 @@ class CartPage extends StatelessWidget {
             "Cart",
             style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
           ),
+          bottom: OfflineBanner(),
           centerTitle: true,
           backgroundColor: Colors.white,
           iconTheme: const IconThemeData(color: Colors.black),

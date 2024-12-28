@@ -1,10 +1,11 @@
 import 'package:asmolg/MainScreeens/CartPage.dart';
-import 'package:asmolg/StateManager/CartState.dart';
+import 'package:asmolg/Provider/CartState.dart';
 import 'package:flutter/material.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:marquee/marquee.dart';
 import 'package:shimmer/shimmer.dart';
+import '../Provider/offline-online_status.dart';
 import '../SeeAllPage.dart';
 import '../aptitude_card.dart';
 import '../department_card.dart';
@@ -119,6 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        bottom: OfflineBanner(),
         elevation: 0,
         backgroundColor: Colors.white,
         title: const Text(

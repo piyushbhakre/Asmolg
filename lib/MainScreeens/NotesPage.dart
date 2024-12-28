@@ -1,4 +1,5 @@
 import 'package:asmolg/MainScreeens/ChatScreen.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:asmolg/subject.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:flutter/material.dart';
@@ -110,6 +111,7 @@ class _NotesPageState extends State<NotesPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        bottom: OfflineBanner(),
         title: Text(widget.subjectName),
         backgroundColor: Colors.white,
         elevation: 1,

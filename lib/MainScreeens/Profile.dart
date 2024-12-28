@@ -1,5 +1,6 @@
 import 'package:asmolg/Authentication/LoginScreen.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -170,6 +171,7 @@ class _ProfileAppState extends State<ProfileApp> {
         body: SafeArea(
           child: Stack(
             children: [
+              OfflineBanner(height: 24.0),
               if (isLoading)
                 Shimmer.fromColors(
                   baseColor: Colors.grey[300]!,

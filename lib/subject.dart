@@ -1,7 +1,8 @@
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/MainScreeens/contentPreview.dart';
 import 'package:asmolg/MainScreeens/homepage.dart';
-import 'package:asmolg/NotificationController.dart';
+import 'package:asmolg/Provider/NotificationController.dart';
+import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,7 +11,7 @@ import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shimmer/shimmer.dart';
 import 'MainScreeens/CartPage.dart';
-import 'StateManager/CartState.dart';
+import 'Provider/CartState.dart';
 
 class SubjectPage extends StatefulWidget {
   final String departmentName;
@@ -37,6 +38,7 @@ class _SubjectPageState extends State<SubjectPage> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
+        bottom: OfflineBanner(),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,

@@ -61,7 +61,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(// Added SafeArea here
+    return SafeArea(
       bottom: true,
       top: false,
       child: GetMaterialApp(

@@ -69,6 +69,9 @@ dependencies:
   safe_device: ^1.1.9
   internet_connection_checker: ^1.0.0+1
   toastification: ^2.3.0
+#-------Most Imp Dep Firebase performance for Razor Pay ------#
+  firebase_performance: ^0.10.0+11
+  safe_text: ^1.0.7
 
 
 dev_dependencies:

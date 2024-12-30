@@ -1,3 +1,4 @@
+import 'package:asmolg/Constant/bad_words_Constant.dart';
 import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +6,8 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../Provider/UserController.dart';
+import 'package:safe_text/safe_text.dart';
+
 
 class ChatScreen extends StatefulWidget {
   final String subjectId;
@@ -44,7 +47,13 @@ class _ChatScreenState extends State<ChatScreen> {
   void _sendMessage() async {
     if (_controller.text.isNotEmpty) {
       setState(() => _isSending = true); // Show loading spinner
-      final String messageText = _controller.text.trim();
+
+      // Simulate filtering delay (optional, to visualize the spinner)
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Filter the bad words
+      final String messageText = _filterBadWords(_controller.text.trim());
+
       final String userName = userController.fullName.value.isEmpty
           ? 'Anonymous'
           : userController.fullName.value;
@@ -109,6 +118,22 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  String _filterBadWords(String inputText) {
+    // Normalize input text to lowercase
+    String normalizedInput = inputText.toLowerCase();
+
+    // Normalize bad words list to lowercase
+    List<String> normalizedBadWords = customBadWords.map((word) => word.toLowerCase()).toList();
+
+    return SafeText.filterText(
+      text: normalizedInput, // Use normalized text
+      extraWords: normalizedBadWords, // Use normalized bad words
+      useDefaultWords: true, // Include default bad words
+      fullMode: true, // Fully obscure bad words
+      obscureSymbol: '*', // Replace characters with '*'
+    );
+  }
+
   void _toggleSelection(int index, String messageEmail) {
     final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
 
@@ -127,15 +152,81 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _deleteSelectedMessages(List<dynamic> messages) async {
     bool confirm = await showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text("Delete Messages"),
-        content: const Text("Are you sure you want to delete the selected messages?"),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text("No")),
-          TextButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text("Yes")),
-        ],
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12), // Rounded corners
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(16), // Inner padding
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12), // Rounded corners
+            color: Colors.white, // Background color
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Title
+              const Text(
+                "Delete Messages",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 12),
+
+              // Content
+              const Text(
+                "Are you sure you want to delete the selected messages?",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 20),
+
+              // Buttons Row
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Cancel Button
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.grey.shade300,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "No",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                  ),
+
+                  // Confirm Button
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      "Yes",
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
+
 
     if (confirm) {
       final currentUserEmail = FirebaseAuth.instance.currentUser?.email;
@@ -366,13 +457,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                       ),
                                       const SizedBox(height: 1), // Space between sender name and message text
                                       // Message Text
-                                      Text(
-                                        message['message'],
-                                        style: const TextStyle(
-                                          color: Colors.black87,
-                                          fontSize: 16,
-                                        ),
-                                      ),
+                                      Text(_filterBadWords(message['message'])),
+
                                       const SizedBox(height: 4),
                                       // Timestamp
                                       Align(

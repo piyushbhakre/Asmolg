@@ -228,7 +228,7 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
       // Show CherryToast for unexpected errors
       CherryToast.error(
         title: const Text("Payment Error"),
-        description: Text("An unexpected error occurred: $e"),
+        description: Text("An unexpected error occurred Please check the internet"),
         animationType: AnimationType.fromTop,
         toastPosition: Position.top,
         autoDismiss: true,
@@ -350,18 +350,16 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
     return Scaffold(
       body: Stack(
         children: [
-          // The main content, with the blur effect on the background
           Positioned.fill(
             child: Column(
               children: [
-                // AppBar will be inside the Stack to get blurred
                 AppBar(
                   title: const Text("Billing", style: TextStyle(color: Colors.white)),
                   backgroundColor: Colors.black,
-                  bottom: OfflineBanner(),
                   iconTheme: const IconThemeData(color: Colors.white),
                   elevation: 1,
                 ),
+                OfflineBanner(),
                 Expanded(
                   child: Container(
                     color: Colors.white,
@@ -538,7 +536,6 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
       ),
     );
   }
-
 
   Widget _shimmerLoadingPlaceholder() {
     return Shimmer.fromColors(

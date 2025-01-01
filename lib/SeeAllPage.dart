@@ -39,7 +39,11 @@ class _SeeAllPageState extends State<SeeAllPage> {
       appBar: AppBar(
         bottom: OfflineBanner(),
         backgroundColor: Colors.white,
-        title: Text(widget.title),
+        title: Text(widget.title,
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),

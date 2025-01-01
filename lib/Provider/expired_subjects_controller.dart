@@ -11,7 +11,7 @@ class ExpiredSubjectsController extends GetxController {
         // Fetch expiry days
         int globalExpiryDays = 0;
         final expiryDoc = await FirebaseFirestore.instance
-            .collection('Expiry days')
+            .collection('Miscellaneous')
             .doc('Subject expiry')
             .get();
         if (expiryDoc.exists && expiryDoc.data() != null) {

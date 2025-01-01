@@ -7,6 +7,7 @@ import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shimmer/shimmer.dart';
@@ -100,13 +101,7 @@ class _SubjectPageState extends State<SubjectPage> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
             // PushReplacement to navigate to Subject() screen and replace the current screen
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => HomeScreen()),
-              // Replace with your target screen
-              (route) =>
-                  false, // This removes all the previous routes from the stack
-            );
+            Get.offAll(() => HomeScreen());
           },
         ),
       ),
@@ -724,7 +719,7 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
                     ),
                     // Move Positioned here, directly inside Stack
                     if (_isSubscribed) Positioned(
-                      top: 4,
+                      top: 0.5,
                       right: 0,
                       child: Container(
                         padding: const EdgeInsets.symmetric(

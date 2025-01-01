@@ -27,7 +27,8 @@ class _ProfileAppState extends State<ProfileApp> {
   @override
   void initState() {
     super.initState();
-    fetchUserDetails(); // Fetch the phone number and full name when the widget is initialized
+    fetchUserDetails();
+    expiredSubjectsController.deleteExpiredSubjects();
   }
 // Helper function to strip the time from DateTime and compare just the date part
   bool isExpired(DateTime purchaseDate, int expiryDays) {
@@ -35,10 +36,8 @@ class _ProfileAppState extends State<ProfileApp> {
     DateTime today = DateTime(now.year, now.month, now.day);
     DateTime expiryDate = purchaseDate.add(Duration(days: expiryDays));
     DateTime expiryStartDate = DateTime(expiryDate.year, expiryDate.month, expiryDate.day);
-
     return expiryStartDate.isBefore(today) || expiryStartDate.isAtSameMomentAs(today);
   }
-
 
   Future<void> fetchUserDetails() async {
     if (user != null) {
@@ -131,7 +130,6 @@ class _ProfileAppState extends State<ProfileApp> {
     }
   }
 
-
   Future<void> _signOut() async {
     await FirebaseAuth.instance.signOut();
     // After signing out, navigate to the login screen
@@ -160,7 +158,6 @@ class _ProfileAppState extends State<ProfileApp> {
       },
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -421,16 +418,12 @@ class _ProfileAppState extends State<ProfileApp> {
                           ),
                         );
                       } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => NotesPage(
-                              subjectName: course['content'],
-                              subjectDocId: course['subject_id'], // Pass the subjectId
-                              departmentDocId: course['department_name'] ?? 'Unknown',
-                            ),
-                          ),
-                        );
+                        Get.to(() => NotesPage(
+                          subjectName: course['content'],
+                          subjectDocId: course['subject_id'], // Pass the subjectId
+                          departmentDocId: course['department_name'] ?? 'Unknown',
+                        ));
+
                       }
                     },
                     child: Container(

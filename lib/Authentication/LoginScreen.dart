@@ -47,6 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    // Validate email and password fields
     setState(() {
       _emailError = _emailController.text.isEmpty ? "Please fill in the email" : null;
       _passwordError = _passwordController.text.isEmpty ? "Please fill in the password" : null;
@@ -54,9 +55,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    // Set loading state with mounted check
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
 
     try {
       // Perform sign-in using Firebase Authentication
@@ -65,24 +69,27 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // Save email to SharedPreferences (override existing email if present)
+      // Save email to SharedPreferences
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String userEmail = _emailController.text.trim();
       await prefs.setString('userEmail', userEmail);
 
-
       // Show success message
-      CherryToast.success(
-        title: Text("Login Successful 🎉"),
-        description: Text("Enjoy our services 😃"),
-        animationDuration: Duration(milliseconds: 500),
-      ).show(context);
+      if (mounted) { // Ensure widget is still active
+        CherryToast.success(
+          title: Text("Login Successful 🎉"),
+          description: Text("Enjoy our services 😃"),
+          animationDuration: Duration(milliseconds: 500),
+        ).show(context);
+      }
 
       // Navigate to the home screen
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => HomeScreen()),
-            (Route<dynamic> route) => false,
-      );
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => HomeScreen()),
+              (Route<dynamic> route) => false,
+        );
+      }
     } catch (e) {
       String errorMessage = 'Login failed. Please try again';
       if (e is FirebaseAuthException) {
@@ -90,31 +97,39 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       // Show error message
-      CherryToast.error(
-        title: Text("Login Error"),
-        description: Text(errorMessage),
-        animationDuration: Duration(milliseconds: 500),
-      ).show(context);
+      if (mounted) {
+        CherryToast.error(
+          title: Text("Login Error"),
+          description: Text(errorMessage),
+          animationDuration: Duration(milliseconds: 500),
+        ).show(context);
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      // Reset loading state safely
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-
 
 
   Future<void> _resetPassword(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
 
-      CherryToast.success(
-        title: Text("Success"),
-        description: Text("Password reset email sent."),
-        animationDuration: Duration(milliseconds: 500),
-      ).show(context);
+      if (mounted) {
+        CherryToast.success(
+          title: Text("Success"),
+          description: Text("Password reset email sent."),
+          animationDuration: Duration(milliseconds: 500),
+        ).show(context);
+      }
 
-      Navigator.pop(context); // Close the bottom sheet after sending the email
+      if (mounted) {
+        Navigator.pop(context); // Close the bottom sheet
+      }
     } catch (e) {
       String errorMessage = 'Failed to send reset email';
       if (e is FirebaseAuthException) {
@@ -122,11 +137,20 @@ class _LoginScreenState extends State<LoginScreen> {
           errorMessage = 'Email does not exist in the database';
         }
       }
-      CherryToast.error(
-        title: Text("Error"),
-        description: Text(errorMessage),
-        animationDuration: Duration(milliseconds: 500),
-      ).show(context);
+
+      if (mounted) {
+        CherryToast.error(
+          title: Text("Error"),
+          description: Text(errorMessage),
+          animationDuration: Duration(milliseconds: 500),
+        ).show(context);
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _resetLoading = false; // Reset loading state
+        });
+      }
     }
   }
 

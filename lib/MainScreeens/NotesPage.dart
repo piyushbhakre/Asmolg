@@ -8,7 +8,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:get/get.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 import 'package:shimmer/shimmer.dart';
-import '../fileViewer.dart';
+import '../Pdf_Viewer/fileViewer.dart';
 
 class NotesPage extends StatefulWidget {
   final String departmentDocId; // ID of the department document

@@ -1,0 +1,284 @@
+import 'package:asmolg/Provider/offline-online_status.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:google_mlkit_translation/google_mlkit_translation.dart';
+import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
+import 'package:http/http.dart' as http;
+import 'dart:typed_data';
+
+import 'Translate_Widgets/translation_dialog.dart';
+
+class FileViewerPage extends StatefulWidget {
+  final String fileUrl;
+
+  const FileViewerPage({Key? key, required this.fileUrl}) : super(key: key);
+
+  @override
+  _FileViewerPageState createState() => _FileViewerPageState();
+}
+
+class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObserver {
+  final GlobalKey<SfPdfViewerState> _pdfViewerKey = GlobalKey();
+  final GlobalKey<ExpandableFabState> _fabKey = GlobalKey();
+  late OnDeviceTranslator _translator;
+  final OnDeviceTranslatorModelManager _modelManager = OnDeviceTranslatorModelManager();
+  bool _isTranslationModelReady = false;
+  String _translatedText = ""; // Holds the translated text
+  String _selectedLanguage = "Choose a language"; // Default language display
+  String _previousLanguage = ""; // To track if language changes
+  bool _isLoading = false; // Shows loading status
+  final Map<String, TranslateLanguage> _languages = {
+    'Hindi': TranslateLanguage.hindi,
+    'Bengali': TranslateLanguage.bengali,
+    'Tamil': TranslateLanguage.tamil,
+    'Telugu': TranslateLanguage.telugu,
+    'Marathi': TranslateLanguage.marathi,
+  };
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // Download translation models
+    _downloadTranslationModels();
+  }
+
+  Future<void> _downloadTranslationModels() async {
+    try {
+      for (var language in _languages.values) {
+        if (!await _modelManager.isModelDownloaded(language.bcpCode)) {
+          await _modelManager.downloadModel(language.bcpCode);
+        }
+      }
+
+      setState(() {
+        _isTranslationModelReady = true;
+      });
+    } catch (e) {
+      debugPrint("Error downloading translation models: $e");
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _translator.close();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: DropdownButton<String>(
+          value: _selectedLanguage,
+          items: ["Choose a language", ..._languages.keys]
+              .map((language) => DropdownMenuItem(
+            value: language,
+            child: Text(language),
+          ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                if (_selectedLanguage != value) {
+                  _translatedText = ""; // Clear previous translation if language changes
+                  _previousLanguage = value; // Track new language
+                }
+                _selectedLanguage = value;
+              });
+            }
+          },
+          underline: Container(),
+          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 18),
+        ),
+        bottom: OfflineBanner(),
+        backgroundColor: Colors.white,
+        elevation: 1,
+        iconTheme: const IconThemeData(color: Colors.black),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          SfPdfViewer.network(
+            widget.fileUrl,
+            key: _pdfViewerKey,
+          ),
+          if (_isLoading)
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: LinearProgressIndicator(
+                backgroundColor: Colors.grey[300],
+                valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+              ),
+            ),
+        ],
+      ),
+      floatingActionButtonLocation: ExpandableFab.location,
+      floatingActionButton: ExpandableFab(
+        key: _fabKey,
+        distance: 80.0,
+        type: ExpandableFabType.up,
+        overlayStyle: ExpandableFabOverlayStyle(
+          color: Colors.black.withOpacity(0.5),
+          blur: 5,
+        ),
+        children: [
+          FloatingActionButton.extended(
+            heroTag: "translate",
+            onPressed: () {
+              _fabKey.currentState?.toggle(); // Close the FAB
+              _onTranslateButtonPressed();
+            },
+            label: const Row(
+              children: [
+                Text("Translate"),
+                SizedBox(width: 5),
+                _BetaLabel(),
+              ],
+            ),
+            icon: const Icon(Icons.translate),
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+          ),
+          FloatingActionButton.extended(
+            heroTag: "summarize",
+            onPressed: () {
+              _fabKey.currentState?.toggle(); // Close the FAB
+              _onSummarizeButtonPressed();
+            },
+            label: const Row(
+              children: [
+                Text("Summarize"),
+                SizedBox(width: 5),
+                _BetaLabel(),
+              ],
+            ),
+            icon: const Icon(Icons.summarize),
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _onTranslateButtonPressed() {
+    if (_selectedLanguage == "Choose a language") {
+      _showFlutterToast("Please select a language first.");
+      return;
+    }
+
+    if (_previousLanguage != _selectedLanguage) {
+      _translatedText = ""; // Clear previous translation
+    }
+
+    setState(() {
+      _previousLanguage = _selectedLanguage;
+      _isLoading = true; // Show the progress indicator
+    });
+
+    // Start the translation
+    _translateText(widget.fileUrl, _languages[_selectedLanguage]!);
+  }
+
+  Future<void> _translateText(String fileUrl, TranslateLanguage targetLanguage) async {
+    try {
+      final response = await http.get(Uri.parse(fileUrl));
+      if (response.statusCode == 200) {
+        final Uint8List pdfBytes = response.bodyBytes;
+
+        final PdfDocument document = PdfDocument(inputBytes: pdfBytes);
+        final PdfTextExtractor extractor = PdfTextExtractor(document);
+
+        String allText = "";
+        for (int i = 0; i < document.pages.count; i++) {
+          allText += extractor.extractText(startPageIndex: i, endPageIndex: i) + "\n";
+        }
+
+        document.dispose();
+
+        // Initialize the translator
+        _translator = OnDeviceTranslator(
+          sourceLanguage: TranslateLanguage.english,
+          targetLanguage: targetLanguage,
+        );
+
+        String translated = await _translator.translateText(allText);
+
+        setState(() {
+          _translatedText = translated;
+          _isLoading = false; // Hide the progress indicator
+        });
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TranslationDialog(
+              translatedText: _translatedText,
+              selectedLanguage: _selectedLanguage,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Error processing PDF: $e');
+      setState(() {
+        _isLoading = false; // Hide the progress indicator
+      });
+    }
+  }
+
+  void _onSummarizeButtonPressed() {
+    _showFlutterToast("Summarization feature clicked.");
+  }
+
+  void _showFlutterToast(String message) {
+    FToast fToast = FToast();
+    fToast.init(context);
+
+    fToast.showToast(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25.0),
+          color: Colors.black,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.info, color: Colors.white),
+            const SizedBox(width: 12.0),
+            Text(message, style: const TextStyle(color: Colors.white)),
+          ],
+        ),
+      ),
+      gravity: ToastGravity.BOTTOM,
+      toastDuration: const Duration(seconds: 2),
+    );
+  }
+}
+
+class _BetaLabel extends StatelessWidget {
+  const _BetaLabel({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.red,
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: const Text(
+        "BETA",
+        style: TextStyle(color: Colors.white, fontSize: 10),
+      ),
+    );
+  }
+}

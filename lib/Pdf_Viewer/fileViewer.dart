@@ -1,3 +1,4 @@
+import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:asmolg/Pdf_Viewer/Summerized_Widgets/SummarizedPage.dart';
 import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,8 @@ import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'Translate_Widgets/translation_dialog.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 
 class FileViewerPage extends StatefulWidget {
   final String fileUrl;
@@ -39,19 +42,17 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     'Marathi': TranslateLanguage.marathi,
   };
 
-  final String apiKey = "AIzaSyA-Sqs7avyLCE2jWwKjqCvaFqyxGt75zTg";
   late final GenerativeModel model;
 
   @override
   void initState() {
     super.initState();
+    _requestStoragePermission();
     model = GenerativeModel(
       model: 'gemini-1.5-flash-latest',
-      apiKey: apiKey,
+      apiKey: GEMINI_API_KEY,
     );
     WidgetsBinding.instance.addObserver(this);
-
-    // Download translation models
     _downloadTranslationModels();
   }
 
@@ -70,6 +71,24 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
       debugPrint("Error downloading translation models: $e");
     }
   }
+
+  Future<void> _requestStoragePermission() async {
+    if (await Permission.storage.request().isGranted) {
+      // Storage permission granted
+      _downloadTranslationModels();
+    } else if (await Permission.manageExternalStorage.request().isGranted) {
+      // Manage external storage permission granted
+      _downloadTranslationModels();
+    } else if (await Permission.storage.isPermanentlyDenied) {
+      // Permission permanently denied, redirect to settings
+      openAppSettings();
+    } else {
+      // Permission denied, show a toast
+      _showFlutterToast("Storage permission Denied");
+    }
+  }
+
+
 
   @override
   void dispose() {
@@ -293,13 +312,15 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     }
   }
 
-
   void _showFlutterToast(String message) {
     FToast fToast = FToast();
     fToast.init(context);
 
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     fToast.showToast(
       child: Container(
+        width: screenWidth * 0.9, // Set width to 90% of the screen
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 12.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(25.0),
@@ -310,14 +331,22 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
           children: [
             const Icon(Icons.info, color: Colors.white),
             const SizedBox(width: 12.0),
-            Text(message, style: const TextStyle(color: Colors.white)),
+            Flexible(
+              child: Text(
+                message,
+                style: const TextStyle(color: Colors.white),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+              ),
+            ),
           ],
         ),
       ),
       gravity: ToastGravity.BOTTOM,
-      toastDuration: const Duration(seconds: 2),
+      toastDuration: const Duration(seconds: 3),
     );
   }
+
 }
 
 class _BetaLabel extends StatelessWidget {

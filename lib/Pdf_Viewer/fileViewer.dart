@@ -1,13 +1,14 @@
+import 'package:asmolg/Pdf_Viewer/Summerized_Widgets/SummarizedPage.dart';
 import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import 'package:google_mlkit_translation/google_mlkit_translation.dart';
 import 'package:flutter_expandable_fab/flutter_expandable_fab.dart';
 import 'package:http/http.dart' as http;
 import 'dart:typed_data';
-
 import 'Translate_Widgets/translation_dialog.dart';
 
 class FileViewerPage extends StatefulWidget {
@@ -25,6 +26,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   late OnDeviceTranslator _translator;
   final OnDeviceTranslatorModelManager _modelManager = OnDeviceTranslatorModelManager();
   bool _isTranslationModelReady = false;
+  String _summaryText = ""; // Holds the summarized text
   String _translatedText = ""; // Holds the translated text
   String _selectedLanguage = "Choose a language"; // Default language display
   String _previousLanguage = ""; // To track if language changes
@@ -37,9 +39,16 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     'Marathi': TranslateLanguage.marathi,
   };
 
+  final String apiKey = "AIzaSyA-Sqs7avyLCE2jWwKjqCvaFqyxGt75zTg";
+  late final GenerativeModel model;
+
   @override
   void initState() {
     super.initState();
+    model = GenerativeModel(
+      model: 'gemini-1.5-flash-latest',
+      apiKey: apiKey,
+    );
     WidgetsBinding.instance.addObserver(this);
 
     // Download translation models
@@ -234,9 +243,56 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     }
   }
 
-  void _onSummarizeButtonPressed() {
-    _showFlutterToast("Summarization feature clicked.");
+  void _onSummarizeButtonPressed() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Step 1: Fetch the PDF file
+      final httpResponse = await http.get(Uri.parse(widget.fileUrl)); // Rename to `httpResponse`
+      if (httpResponse.statusCode == 200) {
+        final Uint8List pdfBytes = httpResponse.bodyBytes;
+
+        // Step 2: Extract text from the PDF
+        final PdfDocument document = PdfDocument(inputBytes: pdfBytes);
+        final PdfTextExtractor extractor = PdfTextExtractor(document);
+
+        String allText = "";
+        for (int i = 0; i < document.pages.count; i++) {
+          allText += extractor.extractText(startPageIndex: i, endPageIndex: i) + "\n";
+        }
+        document.dispose();
+
+        // Step 3: Summarize the extracted text
+        final content = [Content.text(allText)];
+        final generatedResponse = await model.generateContent(content); // Rename to `generatedResponse`
+
+        setState(() {
+          _summaryText = generatedResponse.text ?? "No summary available.";
+          _isLoading = false;
+        });
+
+        // Navigate to the summary page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SummaryPage(
+              summaryText: _summaryText,          // Pass the Gemini API model
+            ),
+          ),
+        );
+
+      }
+    } catch (e) {
+      debugPrint('Error during summarization: $e');
+      setState(() {
+        _isLoading = false;
+      });
+      _showFlutterToast("Failed to summarize the document.");
+    }
   }
+
 
   void _showFlutterToast(String message) {
     FToast fToast = FToast();

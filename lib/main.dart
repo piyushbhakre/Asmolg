@@ -10,7 +10,13 @@ import 'package:get/get.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+//------------------REMOVE IT FOR DEBUGGING-------------------------//
+
    // Get.put(DeveloperModeDetection());
+
+//-----------------COMMENT ABOVE CODE WHILE DEBUGGING----------------//
+
   await Firebase.initializeApp();
   Get.put(UserController());
 

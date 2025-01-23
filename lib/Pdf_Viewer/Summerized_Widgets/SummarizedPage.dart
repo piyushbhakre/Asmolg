@@ -1,4 +1,5 @@
 import 'package:asmolg/Constant/ApiConstant.dart';
+import 'package:asmolg/Pdf_Viewer/OthefWidgets/Beta_lable.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_smart_reply/google_mlkit_smart_reply.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
@@ -19,7 +20,6 @@ class _SummaryPageState extends State<SummaryPage> {
   late GenerativeModel _geminiModel;
   bool _isLoading = false;
 
-
   @override
   void initState() {
     super.initState();
@@ -39,6 +39,32 @@ class _SummaryPageState extends State<SummaryPage> {
   void dispose() {
     _smartReply.close();
     super.dispose();
+  }
+
+  /// Splits the summary text and returns a list of TextSpans
+  List<TextSpan> _parseSummary(String text) {
+    final spans = <TextSpan>[];
+    final regex = RegExp(r'\*\*(.*?)\*\*'); // Matches text between '**'
+    int lastIndex = 0;
+
+    // Find and process all bold matches
+    for (final match in regex.allMatches(text)) {
+      if (match.start > lastIndex) {
+        spans.add(TextSpan(text: text.substring(lastIndex, match.start)));
+      }
+      spans.add(TextSpan(
+        text: match.group(1), // Add bold text
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      ));
+      lastIndex = match.end;
+    }
+
+    // Add remaining normal text after the last match
+    if (lastIndex < text.length) {
+      spans.add(TextSpan(text: text.substring(lastIndex)));
+    }
+
+    return spans;
   }
 
   void _sendMessage(String text) async {
@@ -69,7 +95,6 @@ class _SummaryPageState extends State<SummaryPage> {
 
   Future<String> _fetchGeminiResponse(String query) async {
     try {
-      // Include the summary as context for the Gemini API
       final content = [
         Content.text("Summary: ${widget.summaryText}\nUser Question: $query"),
       ];
@@ -86,63 +111,82 @@ class _SummaryPageState extends State<SummaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("ChatBot"),
+        title: Row(
+          children: const [
+            Text("ChatBot"),
+            SizedBox(width: 8),
+            BetaLabel(),
+          ],
+        ),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              reverse: true,
-              padding: const EdgeInsets.all(16),
-              itemCount: _chatMessages.length,
-              itemBuilder: (context, index) {
-                final message = _chatMessages[_chatMessages.length - 1 - index];
-                return Align(
-                  alignment: message['isBot'] ? Alignment.centerLeft : Alignment.centerRight,
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: message['isBot'] ? Colors.grey[300] : Colors.blue,
-                      borderRadius: BorderRadius.circular(8),
+      body: Container(
+        decoration: const BoxDecoration(color: Colors.white),
+        child: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                reverse: true,
+                padding: const EdgeInsets.all(16),
+                itemCount: _chatMessages.length,
+                itemBuilder: (context, index) {
+                  final message = _chatMessages[_chatMessages.length - 1 - index];
+                  final isBot = message['isBot'] as bool;
+
+                  return Align(
+                    alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isBot ? Colors.grey[300] : Colors.blue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: isBot
+                          ? RichText(
+                        text: TextSpan(
+                          children: _parseSummary(message['message']),
+                          style: const TextStyle(color: Colors.black),
+                        ),
+                      )
+                          : Text(
+                        message['message'],
+                        style: const TextStyle(color: Colors.white),
+                      ),
                     ),
-                    child: Text(
-                      message['message'],
-                      style: TextStyle(
-                        color: message['isBot'] ? Colors.black : Colors.white,
+                  );
+                },
+              ),
+            ),
+            if (_isLoading) const LinearProgressIndicator(),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: "Type your question...",
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
                       ),
                     ),
                   ),
-                );
-              },
-            ),
-          ),
-          if (_isLoading)
-            const LinearProgressIndicator(),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: "Type your question...",
-                      border: OutlineInputBorder(),
-                    ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Colors.blue),
+                    onPressed: () => _sendMessage(_messageController.text),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.send, color: Colors.blue),
-                  onPressed: () => _sendMessage(_messageController.text),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

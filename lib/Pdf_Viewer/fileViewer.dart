@@ -1,4 +1,5 @@
 import 'package:asmolg/Constant/ApiConstant.dart';
+import 'package:asmolg/Pdf_Viewer/OthefWidgets/Beta_lable.dart';
 import 'package:asmolg/Pdf_Viewer/Summerized_Widgets/SummarizedPage.dart';
 import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:flutter/material.dart';
@@ -167,7 +168,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
               children: [
                 Text("Translate"),
                 SizedBox(width: 5),
-                _BetaLabel(),
+                BetaLabel(),
               ],
             ),
             icon: const Icon(Icons.translate),
@@ -184,7 +185,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
               children: [
                 Text("Summarize"),
                 SizedBox(width: 5),
-                _BetaLabel(),
+                BetaLabel(),
               ],
             ),
             icon: const Icon(Icons.summarize),
@@ -349,21 +350,3 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
 
 }
 
-class _BetaLabel extends StatelessWidget {
-  const _BetaLabel({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: const Text(
-        "BETA",
-        style: TextStyle(color: Colors.white, fontSize: 10),
-      ),
-    );
-  }
-}

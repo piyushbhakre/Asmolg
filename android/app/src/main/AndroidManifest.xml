@@ -8,9 +8,6 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
-
-
-
     <application
         android:label="ASMOLG"
         android:name="${applicationName}"

@@ -5,6 +5,7 @@ import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:asmolg/Provider/CartState.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +38,9 @@ class _BillingPageState extends State<BillingPage> {
   double? gstRate;
   bool isLoadingGST = true;
   final TextEditingController _couponController = TextEditingController();
+  bool hasAutomaticDiscount = false;
+  final double autoDiscountThreshold = 221.00;
+  final double autoDiscountPercentage = 10.0;
 
   @override
   void initState() {
@@ -46,6 +50,9 @@ class _BillingPageState extends State<BillingPage> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+
+    // Calculate subtotal during initialization
+    subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
   }
 
   @override
@@ -64,15 +71,18 @@ class _BillingPageState extends State<BillingPage> {
         setState(() {
           gstRate = doc.data()?['gst'].toDouble() ?? 0.00;
           isLoadingGST = false;
+
+          // Check for automatic discount eligibility after GST is fetched
+          _checkAutomaticDiscount();
         });
       } else {
-          toastification.show(
-            context: context,
-            title: const Text('Failed to fetch GST rate.'),
-            type: ToastificationType.error, // Error type toast
-            style: ToastificationStyle.minimal,
-            alignment: Alignment.topCenter, // Position of the toast
-            autoCloseDuration: const Duration(seconds: 3), // Auto-close after 3 seconds
+        toastification.show(
+          context: context,
+          title: const Text('Failed to fetch GST rate.'),
+          type: ToastificationType.error, // Error type toast
+          style: ToastificationStyle.minimal,
+          alignment: Alignment.topCenter, // Position of the toast
+          autoCloseDuration: const Duration(seconds: 3), // Auto-close after 3 seconds
         );
       }
     } catch (e) {
@@ -86,6 +96,19 @@ class _BillingPageState extends State<BillingPage> {
       );
       setState(() {
         isLoadingGST = false;
+      });
+    }
+  }
+
+  void _checkAutomaticDiscount() {
+    double gst = (gstRate ?? 0.00) * subtotal / 100;
+    double totalBeforeDiscount = subtotal + gst;
+
+    // Apply automatic discount if total exceeds threshold
+    if (totalBeforeDiscount > autoDiscountThreshold && appliedCoupon.isEmpty) {
+      setState(() {
+        hasAutomaticDiscount = true;
+        discountPercentage = autoDiscountPercentage;
       });
     }
   }
@@ -117,6 +140,7 @@ class _BillingPageState extends State<BillingPage> {
           setState(() {
             discountPercentage = data['discount'].toDouble();
             appliedCoupon = enteredCode;
+            hasAutomaticDiscount = false; // Remove automatic discount when coupon is applied
           });
           isValidCoupon = true;
 
@@ -133,7 +157,7 @@ class _BillingPageState extends State<BillingPage> {
 
       if (!isValidCoupon) {
         setState(() {
-          discountPercentage = 0.0;
+          discountPercentage = hasAutomaticDiscount ? autoDiscountPercentage : 0.0;
           appliedCoupon = "";
         });
 
@@ -243,23 +267,26 @@ class _BillingPageState extends State<BillingPage> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    String sub = subtotal.toString();
+    // Calculate the final total amount
+    double gst = (gstRate ?? 0.00) * subtotal / 100;
+    double discount = subtotal * (discountPercentage / 100);
+    double totalAmount = subtotal + gst - discount;
 
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       String email = user.email ?? '';
       String mobile = await _getUserMobileNumber(email);
 
-      // Save the payment details for each subject
+      // Save the payment details for each subject with their actual prices
       await FirebaseFirestore.instance.collection('users').doc(email).set({
         'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
           return {
             'subject_name': item['subjectName'],
             'department_name': item['departmentName'],
-            'price': item['price'],
+            'price': item['price'], // Store the actual subject price
             'subject_id': item['subjectId'],
             'mobile_no': mobile,
-            'price': sub,
+            'total_paid': totalAmount.toStringAsFixed(2), // Store the total paid amount
             'date': DateTime.now().toIso8601String(),
             'paymentId': response.paymentId,
           };
@@ -270,11 +297,11 @@ class _BillingPageState extends State<BillingPage> {
         'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
           return {
             'subject_name': item['subjectName'],
-            'price': item['price'],
             'department_name': item['departmentName'],
+            'price': item['price'], // Store the actual subject price
             'subject_id': item['subjectId'],
             'mobile_no': mobile,
-            'price': sub,
+            'total_paid': totalAmount.toStringAsFixed(2), // Store the total paid amount
             'date': DateTime.now().toIso8601String(),
             'paymentId': response.paymentId,
           };
@@ -293,16 +320,11 @@ class _BillingPageState extends State<BillingPage> {
       CherryToast.success(
         title: const Text('Success'),
         displayIcon: true,
-        description: const Text('Payment Successful! You now have access to topics.'),
+        description: const Text('\n Payment Successful! You now have access to topics.'),
         animationDuration: const Duration(milliseconds: 500),
       ).show(context);
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => HomeScreen(),
-        ),
-      );
+      Get.offAll(() => HomeScreen());
     }
   }
 
@@ -332,126 +354,141 @@ class _BillingPageState extends State<BillingPage> {
 
   @override
   Widget build(BuildContext context) {
-    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
+    // Recalculate values each time the UI builds
+    subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
     double gst = (gstRate ?? 0.00) * subtotal / 100;
+    double totalBeforeDiscount = subtotal + gst;
+
+    // Check for automatic discount eligibility if no coupon is applied
+    if (totalBeforeDiscount > autoDiscountThreshold && appliedCoupon.isEmpty && !hasAutomaticDiscount) {
+      setState(() {
+        hasAutomaticDiscount = true;
+        discountPercentage = autoDiscountPercentage;
+      });
+    }
+
     double discount = subtotal * (discountPercentage / 100);
     double total = subtotal + gst - discount;
 
-      return Scaffold(
-        body: Stack(
-          children: [
-            // The main content, with the blur effect on the background
-            Positioned.fill(
-              child: Column(
-                children: [
-                  // AppBar will be inside the Stack to get blurred
-                  AppBar(
-                    title: const Text("Billing", style: TextStyle(color: Colors.white)),
-                    backgroundColor: Colors.black,
-                    iconTheme: const IconThemeData(color: Colors.white),
-                    elevation: 1,
-                  ),
-                  OfflineBanner(),
-                  Expanded(
-                    child: Container(
-                      color: Colors.white,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Expanded(
-                              child: ListView.builder(
-                                itemCount: widget.items.length,
-                                itemBuilder: (context, index) {
-                                  final item = widget.items[index];
-                                  return Column(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(16.0),
-                                        color: Colors.white,
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              "${item['subjectName']}",
-                                              style: const TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black87,
-                                              ),
+    return Scaffold(
+      body: Stack(
+        children: [
+          // The main content, with the blur effect on the background
+          Positioned.fill(
+            child: Column(
+              children: [
+                // AppBar will be inside the Stack to get blurred
+                AppBar(
+                  title: const Text("Billing", style: TextStyle(color: Colors.white)),
+                  backgroundColor: Colors.black,
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  elevation: 1,
+                ),
+                OfflineBanner(),
+                Expanded(
+                  child: Container(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: ListView.builder(
+                              itemCount: widget.items.length,
+                              itemBuilder: (context, index) {
+                                final item = widget.items[index];
+                                return Column(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16.0),
+                                      color: Colors.white,
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            "${item['subjectName']}",
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
                                             ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              "Department: ${item['departmentName']}",
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.black54,
-                                              ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            "Department: ${item['departmentName']}",
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              color: Colors.black54,
                                             ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              "Price: ₹ ${item['price']}",
-                                              style: const TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black87,
-                                              ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            "Price: ₹ ${item['price']}",
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.black87,
                                             ),
-                                          ],
-                                        ),
+                                          ),
+                                        ],
                                       ),
-                                      Divider(
-                                        height: 1,
-                                        color: Colors.grey.shade300,
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
+                                    ),
+                                    Divider(
+                                      height: 1,
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ],
+                                );
+                              },
                             ),
-                            const Divider(thickness: 1, color: Colors.black),
-                            isLoadingGST
-                                ? _shimmerLoadingPlaceholder()
-                                : _buildSubtotalRow(
-                              "Subtotal", subtotal,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
+                          ),
+                          const Divider(thickness: 1, color: Colors.black),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildSubtotalRow(
+                            "Subtotal", subtotal,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
-                            isLoadingGST
-                                ? _shimmerLoadingPlaceholder()
-                                : _buildSubtotalRow(
-                              "GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst,
+                          ),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildSubtotalRow(
+                            "GST (${gstRate?.toStringAsFixed(1) ?? "0"}%)", gst,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.normal,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          if (discount > 0)
+                            _buildSubtotalRow(
+                              hasAutomaticDiscount
+                                  ? "Automatic Discount (${discountPercentage.toStringAsFixed(0)}%)"
+                                  : "Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : discountPercentage.toStringAsFixed(0) + '%'})",
+                              -discount,
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.normal,
-                                color: Colors.black54,
+                                color: Colors.green,
                               ),
+                              isDiscount: true,
                             ),
-                            if (discount > 0)
-                              _buildSubtotalRow(
-                                "Discount (${appliedCoupon.isNotEmpty ? appliedCoupon : "Coupon"})",
-                                -discount,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.normal,
-                                  color: Colors.green,
-                                ),
-                              ),
-                            const SizedBox(height: 16),
-                            isLoadingGST
-                                ? _shimmerLoadingPlaceholder()
-                                : _buildTotalRow(
-                              "Total", total,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
+                          const SizedBox(height: 16),
+                          isLoadingGST
+                              ? _shimmerLoadingPlaceholder()
+                              : _buildTotalRow(
+                            "Total", total,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
-                            const SizedBox(height: 16),
+                          ),
+                          const SizedBox(height: 16),
+                          if (!hasAutomaticDiscount) // Only show coupon field if automatic discount isn't applied
                             _buildCouponRow(
                               style: const TextStyle(
                                 fontSize: 14,
@@ -459,22 +496,61 @@ class _BillingPageState extends State<BillingPage> {
                                 color: Colors.blueAccent,
                               ),
                             ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: () => _openCheckout(total),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
-                                  backgroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: () => _openCheckout(total),
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                backgroundColor: Colors.black,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                                child: const Text(
-                                  "Pay Now",
-                                  style: TextStyle(color: Colors.white, fontSize: 16),
-                                ),
+                              ),
+                              child: const Text(
+                                "Pay Now",
+                                style: TextStyle(color: Colors.white, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (_isProcessingPayment)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: Center(
+                    child: Card(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      elevation: 8,
+                      color: Colors.white,
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            LoadingAnimationWidget.staggeredDotsWave(
+                              color: Colors.black,
+                              size: 50,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              "Ready for payment...",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
@@ -482,52 +558,13 @@ class _BillingPageState extends State<BillingPage> {
                       ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            if (_isProcessingPayment)
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                  child: Container(
-                    color: Colors.black.withOpacity(0.5),
-                    child: Center(
-                      child: Card(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        elevation: 8,
-                        color: Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(24.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              LoadingAnimationWidget.staggeredDotsWave(
-                                color: Colors.black,
-                                size: 50,
-                              ),
-                              const SizedBox(height: 16),
-                              const Text(
-                                "Ready for payment...",
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                 ),
               ),
-          ],
-        ),
-      );
-    }
+            ),
+        ],
+      ),
+    );
+  }
 
   Widget _shimmerLoadingPlaceholder() {
     return Shimmer.fromColors(
@@ -548,10 +585,9 @@ class _BillingPageState extends State<BillingPage> {
         Text(title, style: style),
         Text(
           (isDiscount ? "- " : "") + "₹ ${value.toStringAsFixed(2)}",
-          style: TextStyle(
-            fontSize: 16,
-            color: isDiscount ? Colors.green : Colors.black,  // Ensure discount text is green
-          ),
+          style: isDiscount
+              ? const TextStyle(fontSize: 16, color: Colors.green, fontWeight: FontWeight.bold)
+              : style,
         ),
       ],
     );

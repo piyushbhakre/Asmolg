@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:ui';
-import 'package:asmolg/MainScreeens/NotesPage.dart';
+import 'package:asmolg/MainScreeens/homepage.dart';
+import 'package:asmolg/Provider/CartState.dart';
 import 'package:asmolg/Provider/offline-online_status.dart';
 import 'package:cherry_toast/cherry_toast.dart';
 import 'package:cherry_toast/resources/arrays.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:asmolg/Constant/ApiConstant.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -243,68 +245,68 @@ class _OneSubBillingPageState extends State<OneSubBillingPage> {
   }
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) async {
-
-    String sub = subtotal.toString();
+    // Calculate the total amount paid
+    double subtotal = widget.items.fold(0.0, (sum, item) => sum + double.parse(item['price']!));
+    double gst = (gstRate ?? 0.00) * subtotal / 100;
+    double discount = subtotal * (discountPercentage / 100);
+    double total = subtotal + gst - discount;
 
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       String email = user.email ?? '';
       String mobile = await _getUserMobileNumber(email);
 
-    await FirebaseFirestore.instance.collection('users').doc(email).set({
-      'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
-        return {
-          'subjectName': item['subjectName'],
-          'department_name': item['departmentName'],
-          'price': item['price'],
-          'subject_id': item['subjectId'],
-          'mobile_no': mobile,
-          'price': sub,
-          'date': DateTime.now().toIso8601String(),
-          'paymentId': response.paymentId,
-        };
-      }).toList())
-    }, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('users').doc(email).set({
+        'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
+          return {
+            'subjectName': item['subjectName'],
+            'department_name': item['departmentName'],
+            'price': item['price'],  // Original subject price
+            'total_paid': total.toStringAsFixed(2),  // Total amount paid including GST and discounts
+            'subject_id': item['subjectId'],
+            'mobile_no': mobile,
+            'date': DateTime.now().toIso8601String(),
+            'paymentId': response.paymentId,
+          };
+        }).toList())
+      }, SetOptions(merge: true));
 
-    await FirebaseFirestore.instance.collection('Subscriptions').doc(
-        email).set({
-      'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
-        return {
-          'subjectName': item['subjectName'],
-          'price': item['price'],
-          'department_name': item['departmentName'],
-          'subject_id': item['subjectId'],
-          'mobile_no': mobile,
-          'price': sub,
-          'date': DateTime.now().toIso8601String(),
-          'paymentId': response.paymentId,
-        };
-      }).toList())
-    }, SetOptions(merge: true));
+      await FirebaseFirestore.instance.collection('Subscriptions').doc(email).set({
+        'bought_content': FieldValue.arrayUnion(widget.items.map((item) {
+          return {
+            'subjectName': item['subjectName'],
+            'department_name': item['departmentName'],
+            'price': item['price'],  // Original subject price
+            'total_paid': total.toStringAsFixed(2),  // Total amount paid including GST and discounts
+            'subject_id': item['subjectId'],
+            'mobile_no': mobile,
+            'date': DateTime.now().toIso8601String(),
+            'paymentId': response.paymentId,
+          };
+        }).toList())
+      }, SetOptions(merge: true));
 
-    setState(() {
-      _isProcessingPayment = false;
-    });
+      // Remove purchased items from the cart notifier
+      for (var item in widget.items) {
+        if (item.containsKey('subjectId')) {
+          cartNotifier.removeItemById(item['subjectId']!);
+        }
+      }
 
-    CherryToast.success(
-      title: const Text('Success'),
-      displayIcon: true,
-      description: const Text(
-          'Payment Successful! You now have access to topics.'),
-      animationDuration: const Duration(milliseconds: 500),
-    ).show(context);
+      setState(() {
+        _isProcessingPayment = false;
+      });
 
-    Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              NotesPage(
-                departmentDocId: "${subject['departmentName']}",
-                subjectDocId: "${subject['subjectId']}",
-                subjectName: "${subject['subjectName']}",
-              ),
-        ),
-      );
+      String subjectNames = widget.items.map((item) => item['subjectName']).join(', ');
+
+      CherryToast.success(
+        title: const Text('Success'),
+        displayIcon: true,
+        description: Text('\n Payment Successful! $subjectNames'),
+        animationDuration: const Duration(milliseconds: 500),
+      ).show(context);
+
+      Get.offAll(() => HomeScreen());
     }
   }
 

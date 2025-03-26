@@ -24,7 +24,7 @@ class _SummaryPageState extends State<SummaryPage> {
   void initState() {
     super.initState();
     _geminiModel = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       apiKey: GEMINI_API_KEY,
     );
 
@@ -113,13 +113,29 @@ class _SummaryPageState extends State<SummaryPage> {
       appBar: AppBar(
         title: Row(
           children: const [
-            Text("ChatBot"),
+            Text(
+              "ChatBot",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             SizedBox(width: 8),
             BetaLabel(),
           ],
         ),
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.black, Colors.black],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: Container(
         decoration: const BoxDecoration(color: Colors.white),
@@ -128,7 +144,7 @@ class _SummaryPageState extends State<SummaryPage> {
             Expanded(
               child: ListView.builder(
                 reverse: true,
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 itemCount: _chatMessages.length,
                 itemBuilder: (context, index) {
                   final message = _chatMessages[_chatMessages.length - 1 - index];
@@ -137,11 +153,18 @@ class _SummaryPageState extends State<SummaryPage> {
                   return Align(
                     alignment: isBot ? Alignment.centerLeft : Alignment.centerRight,
                     child: Container(
-                      margin: const EdgeInsets.symmetric(vertical: 4),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: isBot ? Colors.grey[300] : Colors.blue,
-                        borderRadius: BorderRadius.circular(8),
+                        color: isBot ? Colors.grey[300] : Colors.black,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black26,
+                            offset: Offset(2, 2),
+                            blurRadius: 5,
+                          ),
+                        ],
                       ),
                       child: isBot
                           ? RichText(
@@ -152,16 +175,24 @@ class _SummaryPageState extends State<SummaryPage> {
                       )
                           : Text(
                         message['message'],
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 16),
                       ),
                     ),
                   );
                 },
               ),
             ),
-            if (_isLoading) const LinearProgressIndicator(),
+            if (_isLoading)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: LinearProgressIndicator(
+                  color: Colors.black,
+                  backgroundColor: Colors.grey[200],
+                ),
+              ),
             Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(12.0),
               child: Row(
                 children: [
                   Expanded(
@@ -169,25 +200,35 @@ class _SummaryPageState extends State<SummaryPage> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: "Type your question...",
+                        hintStyle: TextStyle(color: Colors.grey[600]),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(30),
+                          borderSide: BorderSide(color: Colors.black),
                         ),
                         filled: true,
                         fillColor: Colors.white,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   IconButton(
-                    icon: const Icon(Icons.send, color: Colors.blue),
+                    icon: const Icon(
+                      Icons.send,
+                      color: Colors.black,
+                      size: 28,
+                    ),
                     onPressed: () => _sendMessage(_messageController.text),
                   ),
                 ],
               ),
             ),
+            SizedBox(height: 25)
           ],
         ),
       ),
     );
   }
+
 }

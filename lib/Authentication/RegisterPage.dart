@@ -198,6 +198,9 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
+      // Create user in Firebase Authentication
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
 
       // Store additional details in Firestore
       await FirebaseFirestore.instance.collection('users').doc(email).set({
@@ -205,7 +208,11 @@ class _RegisterPageState extends State<RegisterPage> {
         'FullName': _fullNameController.text.trim(),
         'MobileNumber': mobile,
         'collegeOrUniversity': _collegeController.text.trim(),
-      });
+        'createdAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Send email verification
+      await userCredential.user?.sendEmailVerification();
 
       CherryToast.success(
         title: Text("Registration Successful"),
@@ -213,7 +220,7 @@ class _RegisterPageState extends State<RegisterPage> {
         animationDuration: Duration(milliseconds: 500),
       ).show(context);
 
-      // Navigate to the login screen or next screen
+      // Navigate to the login screen
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (context) => LoginScreen()),
             (Route<dynamic> route) => false,

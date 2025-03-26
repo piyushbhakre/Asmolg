@@ -29,6 +29,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   final GlobalKey<ExpandableFabState> _fabKey = GlobalKey();
   late OnDeviceTranslator _translator;
   final OnDeviceTranslatorModelManager _modelManager = OnDeviceTranslatorModelManager();
+
   bool _isTranslationModelReady = false;
   String _summaryText = ""; // Holds the summarized text
   String _translatedText = ""; // Holds the translated text
@@ -48,13 +49,13 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
+    _downloadTranslationModels();
     _requestStoragePermission();
     model = GenerativeModel(
       model: 'gemini-1.5-flash-latest',
       apiKey: GEMINI_API_KEY,
     );
     WidgetsBinding.instance.addObserver(this);
-    _downloadTranslationModels();
   }
 
   Future<void> _downloadTranslationModels() async {
@@ -83,9 +84,6 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     } else if (await Permission.storage.isPermanentlyDenied) {
       // Permission permanently denied, redirect to settings
       openAppSettings();
-    } else {
-      // Permission denied, show a toast
-      _showFlutterToast("Storage permission Denied");
     }
   }
 
@@ -347,6 +345,5 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
       toastDuration: const Duration(seconds: 3),
     );
   }
-
 }
 

@@ -1,3 +1,4 @@
+import 'package:asmolg/MainScreeens/CartPage.dart';
 import 'package:asmolg/MainScreeens/NotesPage.dart';
 import 'package:asmolg/MainScreeens/contentPreview.dart';
 import 'package:asmolg/MainScreeens/homepage.dart';
@@ -11,7 +12,6 @@ import 'package:get/get.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shimmer/shimmer.dart';
-import 'MainScreeens/CartPage.dart';
 import 'Provider/CartState.dart';
 
 class SubjectPage extends StatefulWidget {
@@ -34,7 +34,7 @@ class _SubjectPageState extends State<SubjectPage> {
   Widget build(BuildContext context) {
     // Query Firestore to get the subjects subcollection where department matches
     CollectionReference notesCollection =
-        FirebaseFirestore.instance.collection('notes');
+    FirebaseFirestore.instance.collection('notes');
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -74,20 +74,20 @@ class _SubjectPageState extends State<SubjectPage> {
                     builder: (context, cartCount, child) {
                       return cartCount > 0
                           ? Container(
-                              padding: const EdgeInsets.all(5),
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.red,
-                              ),
-                              child: Text(
-                                '$cartCount',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            )
+                        padding: const EdgeInsets.all(5),
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.red,
+                        ),
+                        child: Text(
+                          '$cartCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      )
                           : const SizedBox.shrink();
                     },
                   ),
@@ -247,18 +247,27 @@ class _SubjectPageState extends State<SubjectPage> {
                             }
 
                             if (userSnapshot.hasData &&
-                                userSnapshot.data != null) {
-                              List<dynamic> subscribedSubjects =
-                                  userSnapshot.data!['bought_content'] ?? [];
+                                userSnapshot.data != null &&
+                                userSnapshot.data!.exists) {
+                              // Safe access to bought_content field - handle if it doesn't exist
+                              List<dynamic> subscribedSubjects = [];
+                              if (userSnapshot.data!.data() != null) {
+                                Map<String, dynamic> userData =
+                                userSnapshot.data!.data() as Map<String, dynamic>;
+
+                                if (userData.containsKey('bought_content')) {
+                                  subscribedSubjects = userData['bought_content'] ?? [];
+                                }
+                              }
 
                               _subjects.sort((a, b) {
                                 bool isSubscribedA = subscribedSubjects.any(
-                                    (content) =>
-                                        content['subject_id'] ==
+                                        (content) =>
+                                    content['subject_id'] ==
                                         a['subjectId']);
                                 bool isSubscribedB = subscribedSubjects.any(
-                                    (content) =>
-                                        content['subject_id'] ==
+                                        (content) =>
+                                    content['subject_id'] ==
                                         b['subjectId']);
 
                                 // Subscribed subjects come first
@@ -291,27 +300,53 @@ class _SubjectPageState extends State<SubjectPage> {
                                 itemCount: _subjects.length,
                                 itemBuilder: (context, index) {
                                   final subject = _subjects[index];
+
+                                  // Check if this subject is already subscribed
+                                  bool isSubscribed = subscribedSubjects.any(
+                                          (content) => content['subject_id'] == subject['subjectId']
+                                  );
+
                                   return ModernSubjectCard(
                                     subjectName: subject['name']!,
                                     professorName: subject['professorName']!,
                                     price: subject['price']!,
                                     departmentId: widget.departmentName,
                                     subjectId: subject['subjectId']!,
+                                    isSubscribed: isSubscribed,
                                   );
                                 },
                               );
                             }
 
-                            return const Center(
-                                child: Text(
-                                    'Unable to fetch user subscription details.'));
+                            // Handle case when user document doesn't exist yet
+                            // (no purchases made)
+                            if (_subjects.isEmpty) {
+                              return const Center(
+                                  child: Text(
+                                      'No subjects found for this department.'));
+                            }
+
+                            return ListView.builder(
+                              itemCount: _subjects.length,
+                              itemBuilder: (context, index) {
+                                final subject = _subjects[index];
+                                return ModernSubjectCard(
+                                  subjectName: subject['name']!,
+                                  professorName: subject['professorName']!,
+                                  price: subject['price']!,
+                                  departmentId: widget.departmentName,
+                                  subjectId: subject['subjectId']!,
+                                  isSubscribed: false,
+                                );
+                              },
+                            );
                           },
                         );
                       }
 
                       return const Center(
                           child:
-                              Text('No subjects found for this department.'));
+                          Text('No subjects found for this department.'));
                     },
                   );
                 }
@@ -356,6 +391,7 @@ class ModernSubjectCard extends StatefulWidget {
   final String price; // Original price
   final String departmentId;
   final String subjectId;
+  final bool isSubscribed;
 
   const ModernSubjectCard({
     Key? key,
@@ -364,6 +400,7 @@ class ModernSubjectCard extends StatefulWidget {
     required this.price,
     required this.departmentId,
     required this.subjectId,
+    this.isSubscribed = false,
   }) : super(key: key);
 
   @override
@@ -372,9 +409,8 @@ class ModernSubjectCard extends StatefulWidget {
 
 class _ModernSubjectCardState extends State<ModernSubjectCard> {
   late Razorpay razorpay;
-  bool _isSubscribed = false; // Tracks if the user is subscribed
-  String? _offerPrice; // Holds the real-time fetched offer price
-  String? _offerTagline; // Holds the real-time fetched tagline
+  String? _offerPrice;
+  String? _offerTagline;
 
   @override
   void initState() {
@@ -382,43 +418,16 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
     AwesomeNotifications().setListeners(
         onActionReceivedMethod: NotificationController.onActionReceivedMethod,
         onNotificationCreatedMethod:
-            NotificationController.onNotificationCreatedMethod,
+        NotificationController.onNotificationCreatedMethod,
         onNotificationDisplayedMethod:
-            NotificationController.onNotificationDisplayedMethod,
+        NotificationController.onNotificationDisplayedMethod,
         onDismissActionReceivedMethod:
-            NotificationController.onDismissActionReceivedMethod);
+        NotificationController.onDismissActionReceivedMethod);
 
     razorpay = Razorpay();
     razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, handlePaymentSuccess);
     razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, handlePaymentError);
     razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, handleExternalWallet);
-
-    _checkSubscriptionStatus(); // Check subscription status
-  }
-
-  Future<void> _checkSubscriptionStatus() async {
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      String userEmail = user.email ?? '';
-
-      DocumentSnapshot userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userEmail)
-          .get();
-
-      if (userDoc.exists) {
-        List<dynamic> boughtContent = userDoc['bought_content'];
-        for (var content in boughtContent) {
-          if (content['subject_id'] == widget.subjectId) {
-            setState(() {
-              _isSubscribed = true;
-            });
-            break;
-          }
-        }
-      }
-    }
   }
 
   void handlePaymentSuccess(PaymentSuccessResponse response) async {
@@ -427,10 +436,8 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
       String userEmail = user.email ?? '';
       String mobileNo = await _getUserMobileNumber(userEmail);
 
-      String priceToStore =
-          _offerPrice ?? widget.price; // Use offer price if available
+      String priceToStore = _offerPrice ?? widget.price;
 
-      // Store subscription data
       await FirebaseFirestore.instance.collection('users').doc(userEmail).set({
         'bought_content': FieldValue.arrayUnion([
           {
@@ -445,13 +452,12 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
         ]),
       }, SetOptions(merge: true));
 
+      // Remove from cart after successful purchase
+      cartNotifier.removeItemById(widget.subjectId);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Payment Successful!')),
       );
-
-      setState(() {
-        _isSubscribed = true;
-      });
 
       Navigator.pushReplacement(
         context,
@@ -480,21 +486,20 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
 
   Future<String> _getUserMobileNumber(String email) async {
     DocumentSnapshot userDoc =
-        await FirebaseFirestore.instance.collection('users').doc(email).get();
-    return userDoc['MobileNumber'] ?? '0000000000';
+    await FirebaseFirestore.instance.collection('users').doc(email).get();
+
+    if (userDoc.exists) {
+      Map<String, dynamic>? userData = userDoc.data() as Map<String, dynamic>?;
+      if (userData != null && userData.containsKey('MobileNumber')) {
+        return userData['MobileNumber'] ?? '0000000000';
+      }
+    }
+    return '0000000000';
   }
 
-  void openCheckout() async {
-    User? user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please log in to make a purchase.')),
-      );
-      return;
-    }
-
-    if (_isSubscribed) {
+  void handleCardTap(bool isSubscribed, bool isInCart) {
+    if (isSubscribed) {
+      // If already subscribed, go to notes page
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -505,20 +510,20 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
           ),
         ),
       );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ContentPreviewPage(
-          departmentName: widget.departmentId,
-          subjectName: widget.subjectName,
-          subjectId: widget.subjectId,
-          price: _offerPrice ?? widget.price, // Pass offer price if available
+    }  else {
+      // Show content preview before adding to cart
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ContentPreviewPage(
+            departmentName: widget.departmentId,
+            subjectName: widget.subjectName,
+            subjectId: widget.subjectId,
+            price: _offerPrice ?? widget.price,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   @override
@@ -530,222 +535,212 @@ class _ModernSubjectCardState extends State<ModernSubjectCard> {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
+      // Stream for offer price
       stream: FirebaseFirestore.instance
           .collection('Miscellaneous')
           .doc('offer 1')
           .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData && snapshot.data!.exists) {
-          var data = snapshot.data!.data() as Map<String, dynamic>;
-          _offerPrice =
-              data['price']?.toString(); // Update the offer price in real-time
+      builder: (context, offerSnapshot) {
+        if (offerSnapshot.hasData && offerSnapshot.data!.exists) {
+          var data = offerSnapshot.data!.data() as Map<String, dynamic>;
+          _offerPrice = data['price']?.toString();
           _offerTagline = data['tagline']?.toString();
         } else {
-          _offerPrice = null; // Reset if the document is deleted
+          _offerPrice = null;
           _offerTagline = null;
         }
 
-        // Subscribed subjects displayed first
-        return GestureDetector(
-          onTap: () {
-            if (!_isSubscribed) {
-              openCheckout(); // Only open checkout if not subscribed
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => NotesPage(
-                    departmentDocId: widget.departmentId,
-                    subjectDocId: widget.subjectId,
-                    subjectName: widget.subjectName,
-                  ),
-                ),
-              );
-            }
-          },
-            child: Column(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white, // Removed the green background tint
-                        border: Border(
-                          bottom: BorderSide(
-                              color: Colors.black,
-                              width: 1), // Divider line
+        // Use ValueListenableBuilder to listen to cart changes in real-time
+        return ValueListenableBuilder<int>(
+          valueListenable: cartNotifier,
+          builder: (context, cartCount, child) {
+            // Check if this subject is in cart
+            bool isInCart = cartNotifier.isAdded(widget.subjectId);
+
+            return GestureDetector(
+              onTap: () => handleCardTap(widget.isSubscribed, isInCart),
+              child: Column(
+                children: [
+                  Stack(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            bottom: BorderSide(
+                                color: Colors.black,
+                                width: 1),
+                          ),
                         ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            vertical: 16.0, horizontal: 16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Subject Name
-                            Row(
-                              children: [
-                                const FaIcon(
-                                  FontAwesomeIcons.bookOpen,
-                                  color: Colors.black,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    widget.subjectName,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Professor Name
-                            Row(
-                              children: [
-                                const FaIcon(
-                                  FontAwesomeIcons.userTie,
-                                  color: Colors.black,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    widget.professorName,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black54,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-
-                            // Price Row
-                            if (!_isSubscribed) ...[
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16.0, horizontal: 16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Subject Name
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Row(
-                                    children: [
-                                      if (_offerPrice != null)
-                                        Row(
-                                          children: [
-                                            Text(
-                                              "₹${widget.price}",
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.grey,
-                                                decoration:
-                                                TextDecoration.lineThrough,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      if (_offerPrice != null)
-                                        const SizedBox(width: 10),
-                                      Row(
-                                        children: [
-                                          const FaIcon(
-                                            FontAwesomeIcons.moneyBill,
-                                            color: Colors.black,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Text(
-                                            _offerPrice != null
-                                                ? "₹$_offerPrice"
-                                                : "₹${widget.price}",
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.green,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                  const FaIcon(
+                                    FontAwesomeIcons.bookOpen,
+                                    color: Colors.black,
+                                    size: 16,
                                   ),
-                                  if (_offerTagline != null)
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.subjectName,
+                                      style: const TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Professor Name
+                              Row(
+                                children: [
+                                  const FaIcon(
+                                    FontAwesomeIcons.userTie,
+                                    color: Colors.black,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      widget.professorName,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.black54,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+
+                              // Price Row (only show if not subscribed)
+                              if (!widget.isSubscribed) ...[
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: Colors.orange,
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
+                                        if (_offerPrice != null)
+                                          Row(
                                             children: [
-                                              const FaIcon(
-                                                FontAwesomeIcons.tags,
-                                                color: Colors.white,
-                                                size: 12,
-                                              ),
-                                              const SizedBox(width: 6),
                                               Text(
-                                                _offerTagline!,
+                                                "₹${widget.price}",
                                                 style: const TextStyle(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.bold,
-                                                  color: Colors.white,
+                                                  color: Colors.grey,
+                                                  decoration:
+                                                  TextDecoration.lineThrough,
                                                 ),
                                               ),
                                             ],
                                           ),
+                                        if (_offerPrice != null)
+                                          const SizedBox(width: 10),
+                                        Row(
+                                          children: [
+                                            const FaIcon(
+                                              FontAwesomeIcons.moneyBill,
+                                              color: Colors.black,
+                                              size: 16,
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              _offerPrice != null
+                                                  ? "₹$_offerPrice"
+                                                  : "₹${widget.price}",
+                                              style: const TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                ],
+                                    if (_offerTagline != null && !isInCart)
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: Colors.orange,
+                                              borderRadius: BorderRadius.circular(20),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const FaIcon(
+                                                  FontAwesomeIcons.tags,
+                                                  color: Colors.white,
+                                                  size: 12,
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  _offerTagline!,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ),
+                      // "Subscribed" or "Added to Cart" badge
+                      if (widget.isSubscribed || isInCart)
+                        Positioned(
+                          top: 0.5,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0, vertical: 4.0),
+                            decoration: BoxDecoration(
+                              color: widget.isSubscribed ? Colors.green : Colors.blue,
+                              borderRadius: const BorderRadius.only(
+                                topRight: Radius.circular(8),
+                                bottomLeft: Radius.circular(8),
                               ),
-                            ],
-                            if (_isSubscribed) ...[
-                              // No need for Positioned here
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
-                    // Move Positioned here, directly inside Stack
-                    if (_isSubscribed) Positioned(
-                      top: 0.5,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8.0, vertical: 4.0),
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(8),
-                            bottomLeft: Radius.circular(8),
+                            ),
+                            child: Text(
+                              widget.isSubscribed ? "Subscribed" : "Added to Cart",
+                              style: const TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
                           ),
                         ),
-                        child: const Text(
-                          "Subscribed",
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            )
-
+                    ],
+                  ),
+                ],
+              ),
+            );
+          },
         );
       },
     );

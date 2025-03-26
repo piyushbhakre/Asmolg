@@ -36,6 +36,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   String _selectedLanguage = "Choose a language"; // Default language display
   String _previousLanguage = ""; // To track if language changes
   bool _isLoading = false; // Shows loading status
+  bool _checkingModels = false; // For checking model status without showing UI indicators
   final Map<String, TranslateLanguage> _languages = {
     'Hindi': TranslateLanguage.hindi,
     'Bengali': TranslateLanguage.bengali,
@@ -49,50 +50,87 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
-    _downloadTranslationModels();
     _requestStoragePermission();
+    _checkTranslationModels(); // Just check, don't download yet
     model = GenerativeModel(
-      model: 'gemini-1.5-flash-latest',
+      model: 'gemini-2.0-flash',
       apiKey: GEMINI_API_KEY,
     );
     WidgetsBinding.instance.addObserver(this);
   }
 
+  Future<void> _checkTranslationModels() async {
+    try {
+      setState(() {
+        _checkingModels = true;
+      });
+
+      bool allModelsDownloaded = true;
+      for (var language in _languages.values) {
+        if (!await _modelManager.isModelDownloaded(language.bcpCode)) {
+          allModelsDownloaded = false;
+          break;
+        }
+      }
+
+      setState(() {
+        _isTranslationModelReady = allModelsDownloaded;
+        _checkingModels = false;
+      });
+    } catch (e) {
+      debugPrint("Error checking translation models: $e");
+      setState(() {
+        _checkingModels = false;
+      });
+    }
+  }
+
   Future<void> _downloadTranslationModels() async {
     try {
+      setState(() {
+        _isLoading = true;
+      });
+
       for (var language in _languages.values) {
         if (!await _modelManager.isModelDownloaded(language.bcpCode)) {
           await _modelManager.downloadModel(language.bcpCode);
+          // debugPrint("Downloaded model for ${language.bcpCode}");
+        } else {
+          // debugPrint("Model already downloaded for ${language.bcpCode}");
         }
       }
 
       setState(() {
         _isTranslationModelReady = true;
+        _isLoading = false;
       });
     } catch (e) {
       debugPrint("Error downloading translation models: $e");
+      setState(() {
+        _isLoading = false;
+      });
+      _showFlutterToast("Error downloading translation models. Please try again.");
     }
   }
 
   Future<void> _requestStoragePermission() async {
     if (await Permission.storage.request().isGranted) {
       // Storage permission granted
-      _downloadTranslationModels();
     } else if (await Permission.manageExternalStorage.request().isGranted) {
       // Manage external storage permission granted
-      _downloadTranslationModels();
     } else if (await Permission.storage.isPermanentlyDenied) {
       // Permission permanently denied, redirect to settings
       openAppSettings();
     }
   }
 
-
-
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _translator.close();
+    // Only close the translator if it has been initialized
+    if (_isTranslationModelReady) {
+      _translator.close();
+    }
     super.dispose();
   }
 
@@ -133,6 +171,8 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
           SfPdfViewer.network(
             widget.fileUrl,
             key: _pdfViewerKey,
+            enableTextSelection: false, // Disable text selection
+            interactionMode: PdfInteractionMode.pan, // Allow only panning/zooming
           ),
           if (_isLoading)
             Positioned(
@@ -158,7 +198,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
         children: [
           FloatingActionButton.extended(
             heroTag: "translate",
-            onPressed: () {
+            onPressed: _checkingModels ? null : () {
               _fabKey.currentState?.toggle(); // Close the FAB
               _onTranslateButtonPressed();
             },
@@ -170,12 +210,12 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
               ],
             ),
             icon: const Icon(Icons.translate),
-            backgroundColor: Colors.black,
+            backgroundColor: _checkingModels ? Colors.grey : Colors.black,
             foregroundColor: Colors.white,
           ),
           FloatingActionButton.extended(
             heroTag: "summarize",
-            onPressed: () {
+            onPressed: _checkingModels ? null : () {
               _fabKey.currentState?.toggle(); // Close the FAB
               _onSummarizeButtonPressed();
             },
@@ -187,7 +227,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
               ],
             ),
             icon: const Icon(Icons.summarize),
-            backgroundColor: Colors.black,
+            backgroundColor: _checkingModels ? Colors.grey : Colors.black,
             foregroundColor: Colors.white,
           ),
         ],
@@ -195,9 +235,17 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     );
   }
 
-  void _onTranslateButtonPressed() {
+  void _onTranslateButtonPressed() async {
     if (_selectedLanguage == "Choose a language") {
       _showFlutterToast("Please select a language first.");
+      return;
+    }
+
+    if (!_isTranslationModelReady)  {
+      // Show FlutterToast prompting WiFi usage for model download
+      _showFlutterToast("Please use WiFi and restart app\n to download language models");
+      // await _checkTranslationModels();
+      // await _downloadTranslationModels();
       return;
     }
 
@@ -258,6 +306,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
       setState(() {
         _isLoading = false; // Hide the progress indicator
       });
+      _showFlutterToast("Failed to translate the document: ${e.toString()}");
     }
   }
 
@@ -268,7 +317,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
 
     try {
       // Step 1: Fetch the PDF file
-      final httpResponse = await http.get(Uri.parse(widget.fileUrl)); // Rename to `httpResponse`
+      final httpResponse = await http.get(Uri.parse(widget.fileUrl));
       if (httpResponse.statusCode == 200) {
         final Uint8List pdfBytes = httpResponse.bodyBytes;
 
@@ -284,7 +333,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
 
         // Step 3: Summarize the extracted text
         final content = [Content.text(allText)];
-        final generatedResponse = await model.generateContent(content); // Rename to `generatedResponse`
+        final generatedResponse = await model.generateContent(content);
 
         setState(() {
           _summaryText = generatedResponse.text ?? "No summary available.";
@@ -296,11 +345,10 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
           context,
           MaterialPageRoute(
             builder: (context) => SummaryPage(
-              summaryText: _summaryText,          // Pass the Gemini API model
+              summaryText: _summaryText,
             ),
           ),
         );
-
       }
     } catch (e) {
       debugPrint('Error during summarization: $e');
@@ -346,4 +394,3 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
     );
   }
 }
-

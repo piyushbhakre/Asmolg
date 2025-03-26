@@ -35,8 +35,8 @@ class _SplashScreenState extends State<SplashScreen> {
 
     //------------------REMOVE IT FOR DEBUGGING-------------------------//
 
-    // final detection = DeveloperModeDetection();
-    // await detection.checkDeveloperModeAndExit();
+    final detection = DeveloperModeDetection();
+    await detection.checkDeveloperModeAndExit();
 
     //-----------------COMMENT ABOVE CODE WHILE DEBUGGING----------------//
 

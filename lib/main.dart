@@ -13,7 +13,7 @@ Future<void> main() async {
 
 //------------------REMOVE IT FOR DEBUGGING-------------------------//
 
-   // Get.put(DeveloperModeDetection());
+   Get.put(DeveloperModeDetection());
 
 //-----------------COMMENT ABOVE CODE WHILE DEBUGGING----------------//
 

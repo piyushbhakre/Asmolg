@@ -1,4 +1,4 @@
-package com.asmolg.mainapp;
+package com.asmolg.triroop.education;
 
 import android.os.Bundle;
 import android.view.WindowManager;

@@ -50,6 +50,7 @@ class _FileViewerPageState extends State<FileViewerPage> with WidgetsBindingObse
   @override
   void initState() {
     super.initState();
+    _downloadTranslationModels();
     _requestStoragePermission();
     _checkTranslationModels(); // Just check, don't download yet
     model = GenerativeModel(
